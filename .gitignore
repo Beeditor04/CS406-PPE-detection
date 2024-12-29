@@ -1,0 +1,15 @@
+# file type
+*.zip
+*.egg-info
+*.log
+__pycache__
+
+# folders
+data/*
+logs/*
+build/*
+dist/*
+weights/*
+
+# env
+.env
