@@ -175,6 +175,8 @@ def train_model(train_loader, val_loader, device, num_classes=5, epochs=10, batc
 
     # Save model
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    if not os.path.exists("weights"):
+        os.makedirs("weights")
     torch.save(model.model.state_dict(), f"weights/faster-rcnn-{timestamp}.pt")
     print("Training complete.")
 
