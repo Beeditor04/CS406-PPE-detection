@@ -104,6 +104,9 @@ class CustomDataset(Dataset):
                             "area": (x_max - x_min) * (y_max - y_min),
                             "iscrowd": 0
                         })
+        
+        if not os.path.exists("logs"):
+            os.makedirs("logs")
         with open('logs/debug.log', 'w') as f:
             f.write(f"{coco}")
         return coco
