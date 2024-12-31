@@ -7,3 +7,4 @@ Pillow
 opencv-python
 os
 sys
+pycocotools
