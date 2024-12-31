@@ -15,6 +15,10 @@ def create_parser():
     parser.add_argument("--weight_decay", type=float, default=0.0005, help="Weight decay")
     parser.add_argument("--step_size", type=int, default=3, help="Step size")
     parser.add_argument("--gamma", type=float, default=0.1, help="Gamma")
+    # pre processing data
+    parser.add_argument("--resize", type=int, default=224, help="Resize image")
+    parser.add_argument("--is_aug", type=float, default=False, help="is Augmentation?")
+
     return parser
 
 

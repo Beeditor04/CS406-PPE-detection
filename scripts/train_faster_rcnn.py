@@ -199,8 +199,8 @@ def main():
     
     # Create dataset
     print("Loading dataset...")
-    train_dataset = get_preprocessed_data(TRAIN_PATH)
-    val_dataset = get_preprocessed_data(VAL_PATH)
+    train_dataset = get_preprocessed_data(TRAIN_PATH, args=args)
+    val_dataset = get_preprocessed_data(VAL_PATH, args=args)
     # Create Dataloader
     train_loader = DataLoader(
         train_dataset,

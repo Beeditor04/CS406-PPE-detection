@@ -68,14 +68,26 @@ class CustomDataset(Dataset):
         target = {'boxes': boxes, 'labels': classes, 'image_id': torch.tensor([idx])}
         return image, target
     
-def get_preprocessed_data(data_path):
+def get_preprocessed_data(data_path, args):
     weights = models.detection.FasterRCNN_MobileNet_V3_Large_FPN_Weights.DEFAULT
     normalize = weights.transforms()
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        normalize
-    ])
+    transform = None
+    if bool(args.is_aug):
+        transform = transforms.Compose([
+            transforms.Resize((args.resize, args.resize)),
+            transforms.RandomHorizontalFlip(0.5),
+            transforms.RandomApply([transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1)], p=0.5),
+            transforms.RandomApply([transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 5))], p=0.5),
+            transforms.RandomRotation(degrees=10),
+            transforms.ToTensor(),
+            normalize
+        ])
+    else:
+        transform = transforms.Compose([
+            transforms.Resize((args.resize, args.resize)),
+            transforms.ToTensor(),
+            normalize
+        ])
     data = CustomDataset(
         root_dir=data_path,
         transform=transform
