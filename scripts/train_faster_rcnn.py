@@ -164,7 +164,7 @@ def train_model(train_loader, val_loader, device, num_classes=7, epochs=10, batc
             ar_per_class = metrics["ar50_per_class"]
             map50 = metrics["map50"]
             mar50 = metrics["mar50"]
-                # Print AP@0.5 and AR@0.5 for each class
+            # Print AP@0.5 and AR@0.5 for each class
             print("\nPer-class AP/AR (IoU=0.5):")
             for idx, class_name in enumerate(CLASS_NAMES):
                 ap50 = ap_per_class[idx].item()
@@ -174,12 +174,18 @@ def train_model(train_loader, val_loader, device, num_classes=7, epochs=10, batc
             print(f"mAR@0.5 (all classes): {mar50:.4f}")
             print("=================================")
 
+            # Save model at Epoch X
+            timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            if not os.path.exists("weights"):
+                os.makedirs("weights")
+            torch.save(model.model.state_dict(), f"weights/epoch{epoch}-faster-rcnn-{timestamp}.pt")
+
 
     # Save model
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     if not os.path.exists("weights"):
         os.makedirs("weights")
-    torch.save(model.model.state_dict(), f"weights/faster-rcnn-{timestamp}.pt")
+    torch.save(model.model.state_dict(), f"weights/last-faster-rcnn-{timestamp}.pt")
     print("Training complete.")
 
 def main():
