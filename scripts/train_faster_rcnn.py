@@ -10,6 +10,7 @@ from torchvision import models
 from torch.optim import SGD
 from torchvision import transforms
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from models.FASTER_RCNN import faster_rcnn
 from utils.data_helper import collate_fn
@@ -17,7 +18,6 @@ from utils.metrics import compute_metrics
 from utils.yaml_helper import read_yaml
 from loader.loader_faster_rcnn import get_preprocessed_data
 from parsers.parser_faster_rcnn import parse_args
-from tqdm import tqdm
 
 import time
 args = parse_args()

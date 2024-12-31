@@ -1,3 +1,9 @@
 torch 
 torchvision 
 torchaudio
+pyyaml
+tqdm
+Pillow
+opencv-python
+os
+sys

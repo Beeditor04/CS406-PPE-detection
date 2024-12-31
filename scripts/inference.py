@@ -4,18 +4,19 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 
 import torch
+from torchvision import models, transforms
 from PIL import Image
+
 from models.FASTER_RCNN import faster_rcnn
 from utils.function import show_preds
-from torchvision import models, transforms
 
 def inference(device, pretrain="weights/faster-rcnn.pt", src_path="sample/1.jpg"):
-    model = faster_rcnn(5)
+    model = faster_rcnn(7)
     model.model.load_state_dict(torch.load(pretrain))
     model.model.to(device)
     model.eval()
 
-    threshold = 0.2
+    threshold = 0.5
 
     weights = models.detection.FasterRCNN_MobileNet_V3_Large_FPN_Weights.DEFAULT
     normalize = weights.transforms()
@@ -37,4 +38,4 @@ def inference(device, pretrain="weights/faster-rcnn.pt", src_path="sample/1.jpg"
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    inference(device, pretrain="weights/faster-rcnn-20241229-223244.pt", src_path="sample/1.jpg")
+    inference(device, pretrain="weights/faster-rcnn.pt", src_path="sample/3.jpg")
