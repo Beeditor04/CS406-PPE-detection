@@ -1,9 +1,9 @@
 import os
 import torch
-from torch.utils.data import Dataset
 from PIL import Image
 from torchvision import transforms
-
+from torchvision import models 
+from torch.utils.data import Dataset
 
 
 class CustomDataset(Dataset):
@@ -13,7 +13,6 @@ class CustomDataset(Dataset):
         self.image_dir = os.path.join(root_dir, "images")
         self.label_dir = os.path.join(root_dir, "labels")
         self.image_files = sorted([f for f in os.listdir(self.image_dir) if f.endswith(('.jpg', '.jpeg', '.png'))])
-        self.coco = self._create_coco_format()
 
     def __len__(self):
         return len(self.image_files)
@@ -69,44 +68,16 @@ class CustomDataset(Dataset):
         target = {'boxes': boxes, 'labels': classes, 'image_id': torch.tensor([idx])}
         return image, target
     
-    def _create_coco_format(self):
-        coco = {
-            "images": [],
-            "annotations": [],
-            "categories": []
-        }
-        for idx, img_name in enumerate(self.image_files):
-            img_id = idx
-            img_path = os.path.join(self.image_dir, img_name)
-            image = Image.open(img_path).convert('RGB')
-            width, height = image.size
-            coco["images"].append({
-                "id": img_id,
-                "file_name": img_name,
-                "width": width,
-                "height": height
-            })
-            label_name = os.path.splitext(img_name)[0] + '.txt'
-            label_path = os.path.join(self.label_dir, label_name)
-            if os.path.exists(label_path):
-                with open(label_path, 'r') as f:
-                    for line in f.readlines():
-                        class_id, x, y, w, h = map(float, line.strip().split())
-                        x_min = (x - w / 2) * width
-                        y_min = (y - h / 2) * height
-                        x_max = (x + w / 2) * width
-                        y_max = (y + h / 2) * height
-                        coco["annotations"].append({
-                            "id": len(coco["annotations"]),
-                            "image_id": img_id,
-                            "category_id": int(class_id) + 1, #! Increment class by 1 for COCO
-                            "bbox": [x_min, y_min, x_max - x_min, y_max - y_min],
-                            "area": (x_max - x_min) * (y_max - y_min),
-                            "iscrowd": 0
-                        })
-        
-        if not os.path.exists("logs"):
-            os.makedirs("logs")
-        with open('logs/debug.log', 'w') as f:
-            f.write(f"{coco}")
-        return coco
+def get_preprocessed_data(data_path):
+    weights = models.detection.FasterRCNN_MobileNet_V3_Large_FPN_Weights.DEFAULT
+    normalize = weights.transforms()
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        normalize
+    ])
+    data = CustomDataset(
+        root_dir=data_path,
+        transform=transform
+    )
+    return data

@@ -6,7 +6,17 @@ def create_parser():
     parser.add_argument("--batch_size", type=int, default=8, help="Batch size")
     parser.add_argument("--epochs", type=int, default=10, help="Number of epochs")
     parser.add_argument("--eval_every", type=int, default=1, help="Frequency of evaluation")
+    parser.add_argument("--iter_every", type=int, default=1, help="Frequency of iteration")
+    parser.add_argument("--num_classes", type=int, default=7, help="Number of classes")
+    parser.add_argument("--yaml", type=str, default="data/data-ppe.yaml", help="Path to yaml file")
+    # fine tune the model
+    parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
+    parser.add_argument("--momentum", type=float, default=0.9, help="Momentum")
+    parser.add_argument("--weight_decay", type=float, default=0.0005, help="Weight decay")
+    parser.add_argument("--step_size", type=int, default=3, help="Step size")
+    parser.add_argument("--gamma", type=float, default=0.1, help="Gamma")
     return parser
+
 
 def parse_args():
     parser = create_parser()
