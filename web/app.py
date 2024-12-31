@@ -32,6 +32,18 @@ def predict_image(model, image):
     results = model(image)  # Dự đoán
     return results
 
+def get_class_color(class_id):
+    colors = [
+        (255, 0, 0),  # Red
+        (0, 255, 0),  # Green
+        (0, 0, 255),  # Blue
+        (255, 255, 0),  # Yellow
+        (255, 0, 255),  # Magenta
+        (0, 255, 255),  # Cyan
+        (255, 165, 0),  # Orange
+    ]
+    return colors[class_id % len(colors)]
+
 # Draw bounding boxes
 def draw_boxes(image, results, model, threshold=0.5):
     img = image.copy()
@@ -41,8 +53,9 @@ def draw_boxes(image, results, model, threshold=0.5):
         x1, y1, x2, y2, score, class_id = r
         if score >= threshold:
             class_name = model.names[int(class_id)]
-            draw.rectangle([x1, y1, x2, y2], outline="red", width=3)
-            draw.text((x1, y1), f"{class_name}: {score:.2f}", fill="white")
+            color = get_class_color(int(class_id))
+            draw.rectangle([x1, y1, x2, y2], outline=color, width=3)
+            draw.text((x1, y1), f"{class_name}: {score:.2f}", fill=color)
     return img
 
 def convert_image(img):
@@ -55,7 +68,7 @@ def convert_image(img):
 def main():
     st.title("PPE Detection Web")
 
-    model = load_model("best.pt")
+    model = load_model("pretrain_new_data.pt")
 
     # Tải lên file ảnh hoặc video
     uploaded_file = st.file_uploader(label = "Upload Image or Video", type = ["jpg", "jpeg", "png", "mp4"])
