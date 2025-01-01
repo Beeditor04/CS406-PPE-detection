@@ -3,7 +3,7 @@ import torchvision
 from torchvision import models
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
-class faster_rcnn:
+class FASTER_RCNN:
     def __init__(self, num_classes):
         self.weights = models.detection.FasterRCNN_MobileNet_V3_Large_FPN_Weights.DEFAULT
         self.model = models.detection.fasterrcnn_mobilenet_v3_large_fpn(weights=self.weights)
@@ -31,4 +31,5 @@ class faster_rcnn:
 
     def eval(self):
         self.train(False)
+        self.model.eval()
 

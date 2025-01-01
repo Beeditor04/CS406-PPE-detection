@@ -12,7 +12,7 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from models.FASTER_RCNN import faster_rcnn
+from models.FASTER_RCNN import FASTER_RCNN
 from utils.data_helper import collate_fn
 from utils.metrics import compute_metrics
 from utils.yaml_helper import read_yaml
@@ -70,7 +70,7 @@ def train_model(train_loader, val_loader, device, num_classes=7, epochs=10, batc
         os.makedirs(log_dir)
         
     #setup model
-    model = faster_rcnn(num_classes)
+    model = FASTER_RCNN(num_classes)
     model.model.to(device)
 
     # setup optimizer

@@ -5,6 +5,7 @@ pyyaml
 tqdm
 Pillow
 opencv-python
-os
-sys
 pycocotools
+cython_bbox
+lap
+ultralytics

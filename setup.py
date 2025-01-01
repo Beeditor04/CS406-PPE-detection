@@ -12,11 +12,9 @@ setup(
         'torchmetrics',
         'opencv-python',
         'Pillow',
+        'numpy',
+        'pyyaml',
+        'scikit-learn',
+        'tqdm',        
     ],
-    entry_points={
-        'console_scripts': [
-            'train_faster_rcnn=scripts.train_faster_rcnn:main',
-            'inference=scripts.inference:main',
-        ],
-    },
 )

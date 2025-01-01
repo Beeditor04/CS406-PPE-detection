@@ -37,7 +37,11 @@ class CustomDataset(Dataset):
                     class_id, x, y, w, h = map(float, line.strip().split())
                     boxes.append([x, y, w, h])
                     classes.append(int(class_id) + 1) #! Increment class by 1 for COCO
-        with open('debug-before.log', 'a') as f:
+        
+        ## Debug dataset
+        if not os.path.exists("logs"):
+            os.makedirs("logs")
+        with open('logs/dataset-before.log', 'a') as f:
             f.write(f"BBOX before transform: {boxes} with {image.size}\n")
 
         boxes = torch.tensor(boxes, dtype=torch.float16)
@@ -75,10 +79,8 @@ def get_preprocessed_data(data_path, args):
     if bool(args.is_aug):
         transform = transforms.Compose([
             transforms.Resize((args.resize, args.resize)),
-            transforms.RandomHorizontalFlip(0.5),
-            transforms.RandomApply([transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1)], p=0.5),
-            transforms.RandomApply([transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 5))], p=0.5),
-            transforms.RandomRotation(degrees=10),
+            transforms.RandomApply([transforms.ColorJitter(brightness=0.1, contrast=0.2, saturation=0.2, hue=0.1)], p=0.3),
+            transforms.RandomRotation(degrees=5),
             transforms.ToTensor(),
             normalize
         ])
