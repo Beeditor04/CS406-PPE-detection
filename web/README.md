@@ -19,5 +19,5 @@ streamlit run app.py
 ## Web funtion:
 * Click `Browse files` to upload an image or a video you want to detect
 ![alt text](pic1.png)
-* After the image/video is detected, result will be displayed below. Click `Download` to download the result if the size of image/video too large to display.
+* After the image/video is detected, result will be displayed below. Click `Download` to download the result
 ![alt text](pic2.png)
