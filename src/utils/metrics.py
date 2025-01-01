@@ -27,3 +27,17 @@ def compute_metrics(all_preds, all_targets, class_names):
         "ap50_per_class": ap_per_class,
         "ar50_per_class": ar_per_class
     }
+
+def associate_score(person_box, obj_box):
+    # Find intersection coordinates
+    x1 = max(person_box[0], obj_box[0])
+    y1 = max(person_box[1], obj_box[1])
+    x2 = min(person_box[2], obj_box[2])
+    y2 = min(person_box[3], obj_box[3])
+    
+    # Calculate areas
+    intersection = max(0, x2 - x1) * max(0, y2 - y1)
+    obj_area = (obj_box[2] - obj_box[0]) * (obj_box[3] - obj_box[1])
+    
+    # Return % of object box inside person box
+    return intersection / obj_area if obj_area > 0 else 0

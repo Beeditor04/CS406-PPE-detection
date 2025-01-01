@@ -1,5 +1,5 @@
 import torch
-
+import cv2
 def non_max_suppression(boxes, scores, iou_threshold):
     # Input validation
     if len(boxes) == 0 or len(scores) == 0:
@@ -61,4 +61,47 @@ def non_max_suppression(boxes, scores, iou_threshold):
         inds = mask.nonzero().reshape(-1)
         order = order[inds + 1]
 
-    return keep
+    return 
+
+def remove_invalid_boxes(targets):
+    valid_targets = []
+    for target in targets:
+        boxes = target['boxes']
+        labels = target['labels']
+        valid_indices = (boxes[:, 0] < boxes[:, 2]) & (boxes[:, 1] < boxes[:, 3])  # x1 < x2 and y1 < y2
+        valid_boxes = boxes[valid_indices]
+        valid_labels = labels[valid_indices]
+        valid_targets.append({'boxes': valid_boxes, 'labels': valid_labels})
+    return valid_targets
+
+def draw_fps(cap, frame):
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    fps = ' FPS: ' + str(fps) + ' Width: ' + str(cap.get(3)) + ' Height: ' + str(cap.get(4))
+    cv2.putText(frame, fps, (40, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+    return frame
+
+def draw_bbox(frame, id, x1, y1, x2, y2, conf, missing=None, type='detect', debug=None):
+    if type == "track":
+        # Draw red box for violations, green for compliant
+        color = (0,0,255) if missing else (0,255,0)
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+        
+        # Show ID, score and missing equipment
+        text = f'ID: {id}, Score: {conf:.2f}'
+        if missing:
+            text += f' Missing: {",".join([str(m) for m in missing])}'
+        cv2.putText(frame, text, (x1, y1-10), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+    else:
+        # cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 2)
+        # cv2.putText(frame, f"{id}: {conf:.2f}", 
+        #    (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0,255,0), 2)
+        if debug == "p":
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (255,0,0), 2)
+            cv2.putText(frame, f"{id}: {conf:.2f}", 
+                   (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255,0,0), 2)
+        else:
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 2)
+            cv2.putText(frame, f"{id}: {conf:.2f}", 
+               (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0,255,0), 2)
+        

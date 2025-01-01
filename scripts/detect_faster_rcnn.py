@@ -13,6 +13,7 @@ from models.FASTER_RCNN import FASTER_RCNN
 from utils.function import non_max_suppression
 from utils.yaml_helper import read_yaml
 
+DETECT_THRESH = 0.3
 parse  = argparse.ArgumentParser(description="Parser for Faster-RCNN inference")
 parse.add_argument("--weights", type=str, default="weights/faster-rcnn.pt", help="Path to pretrain weights")
 parse.add_argument("--img_path", type=str, default="sample/1.jpg", help="Path to source image")
@@ -21,7 +22,7 @@ args = parse.parse_args()
 
 yaml_class = read_yaml(args.yaml_class)
 CLASS_NAMES = yaml_class["names"]
-def show_preds(image, image_tensor, preds, output_dir="output", threshold=0.5, class_names=[]):
+def show_preds(image, image_tensor, preds, output_dir="output", threshold=0.3, class_names=[]):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
@@ -33,6 +34,8 @@ def show_preds(image, image_tensor, preds, output_dir="output", threshold=0.5, c
     boxes = preds[0]['boxes']
     labels = preds[0]['labels']
     scores = preds[0]['scores']
+
+    # post-processing
     keep = non_max_suppression(boxes, scores, iou_threshold=0.3)
     boxes = boxes[keep]
     scores = scores[keep]

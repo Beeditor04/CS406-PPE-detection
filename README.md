@@ -37,12 +37,12 @@ python scripts/detect_yolo.py --weights weights/best_yolo.pt --img_path sample/i
 # Tracking
 - run tracker yolo
 ```
-python scripts/tracker_yolo.py --vid_dir sample/videos/1.mp4 --weights weights/best_yolo.pt
+python scripts/tracker_yolo.py --weights weights/best_yolo.pt --vid_dir sample/videos/1.mp4
 ```
 
 - run tracker faster_rcnn
 ```
-python scripts/tracker_faster_rcnn.py --vid_dir sample/videos/1.mp4 --weights weights/best_faster_rcnn.pt
+python scripts/tracker_faster_rcnn.py --weights weights/best_faster_rcnn.pt --vid_dir sample/videos/1.mp4
 ```
 # PPE violation
 

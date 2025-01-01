@@ -104,7 +104,6 @@ def train_model(train_loader, val_loader, device, num_classes=7, epochs=10, batc
         }
         num_batches = len(train_loader)
         for i, (images, targets) in enumerate(train_loader, 1):
-
             #! TRAINING MODEL, return loss_dict = {'loss_classifier': loss_classifier, 'loss_box_reg': loss_box_reg, 'loss_objectness': loss_objectness}
             images = [img.to(device) for img in images]
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]

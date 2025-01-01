@@ -12,6 +12,8 @@ from PIL import Image
 from models.FASTER_RCNN import FASTER_RCNN
 from utils.yaml_helper import read_yaml
 from utils.function import non_max_suppression
+from utils.function import draw_bbox, draw_fps
+from utils.detect_css_violations import detect_css_violations
 from trackers.byte_tracker import BYTETracker
 
 # Argument parser
@@ -40,12 +42,12 @@ height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 # Check if any output videos exist
 num_track = 1
 num_detect = 1
-while os.path.exists(os.path.join(OUTPUT_PATH, f"out_track_{num_track}.mp4")):
+while os.path.exists(os.path.join(OUTPUT_PATH, f"out_track_{num_track}_frcnn.mp4")):
     num_track += 1
-while os.path.exists(os.path.join(OUTPUT_PATH, f"out_detect_{num_detect}.mp4")):
+while os.path.exists(os.path.join(OUTPUT_PATH, f"out_detect_{num_detect}_frcnn.mp4")):
     num_detect += 1
-out_track = cv2.VideoWriter(os.path.join(OUTPUT_PATH, f"out_track_{num_track}.mp4"), cv2.VideoWriter_fourcc(*'mp4v'), int(cap.get(cv2.CAP_PROP_FPS)), (width, height))
-out_detect = cv2.VideoWriter(os.path.join(OUTPUT_PATH, f"out_detect_{num_detect}.mp4"), cv2.VideoWriter_fourcc(*'mp4v'), int(cap.get(cv2.CAP_PROP_FPS)), (width, height))
+out_track = cv2.VideoWriter(os.path.join(OUTPUT_PATH, f"out_track_{num_track}_frcnn.mp4"), cv2.VideoWriter_fourcc(*'mp4v'), int(cap.get(cv2.CAP_PROP_FPS)), (width, height))
+out_detect = cv2.VideoWriter(os.path.join(OUTPUT_PATH, f"out_detect_{num_detect}_frcnn.mp4"), cv2.VideoWriter_fourcc(*'mp4v'), int(cap.get(cv2.CAP_PROP_FPS)), (width, height))
 
 # Setup parameters
 ASPECT_RATIO_THRESH = 0.6  # More condition for vertical box if you like
@@ -63,19 +65,6 @@ class TrackerArgs:
         self.match_thresh = match_thresh
         self.fuse_score = fuse_score
         self.mot20 = False
-
-def draw_fps(frame):
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    fps = ' FPS: ' + str(fps) + ' Width: ' + str(cap.get(3)) + ' Height: ' + str(cap.get(4))
-    cv2.putText(frame, fps, (40, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-    return frame
-
-def draw_bbox(frame, id, x1, y1, x2, y2, conf, type='detect'):
-    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-    if type == "detect":
-        cv2.putText(frame, f"{CLASS_NAMES[id - 1]}: {conf:.2f}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-    if type == "track":
-        cv2.putText(frame, f'ID: {id}, Score: {conf:.2f}', (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
 def main():
     # Model setup
@@ -107,25 +96,28 @@ def main():
         if not ret:
             break
 
-        # Detection
+        #! Detection
         image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         image_tensor = transform(image).unsqueeze(0).to(device)
         with torch.no_grad():
-            preds = model.model(image_tensor)
-            preds = [{k: v.to(device) for k, v in t.items()} for t in preds]
+            preds = model.model(image_tensor) # return xyxy format
+            preds = [{k: v.to(device) for k, v in t.items()} for t in preds] # to device
 
+        #!------------ Post-processing: filter low score, nms
         boxes = preds[0]['boxes']
         labels = preds[0]['labels']
         scores = preds[0]['scores']
-        # post-processing
-        keep = non_max_suppression(boxes, scores, iou_threshold=0.3)
+        keep = non_max_suppression(boxes, scores, iou_threshold=0.7)
         boxes = boxes[keep]
         scores = scores[keep]
         labels = labels[keep]
-        
-        detections = []
+
+        per_detections = []
+        obj_detections = []
         frame_detected = frame.copy()
         for i in range(boxes.shape[0]):
+            if int(scores[i]) < DETECT_THRESH:
+                continue
             box = boxes[i].cpu().numpy()
             label = labels[i].cpu().numpy()
             score = scores[i].cpu().numpy()
@@ -133,8 +125,12 @@ def main():
             class_id = int(label)
             
             # Detections bbox format for tracker
-            detections.append([x1, y1, x2, y2, score])
-            draw_bbox(frame_detected, class_id, x1, y1, x2, y2, score, type='detect')
+            if CLASS_NAMES[class_id] == "Person": # only track person
+                per_detections.append([x1, y1, x2, y2, score])
+                
+            else:
+                obj_detections.append([x1, y1, x2, y2, score, class_id])
+            draw_bbox(frame_detected, CLASS_NAMES[class_id], x1, y1, x2, y2, score, type='detect')
 
         # Convert detections to numpy array
         if detections:
@@ -142,8 +138,9 @@ def main():
         else:
             detections = np.empty((0, 5))
 
-        # Update tracker with detections format
+        #! Update tracker with detections format
         online_targets = tracker.update(detections, [height, width], [height, width])
+        online_targets = detect_css_violations(online_targets, obj_detections) #! CSS violation
 
         # Draw tracked objects
         frame_tracked = frame.copy()
@@ -162,8 +159,8 @@ def main():
                 draw_bbox(frame_tracked, tid, x1, y1, x2, y2, t.score, type='track')
 
         # Save and display the frame
-        draw_fps(frame_detected)
-        draw_fps(frame_tracked)
+        draw_fps(cap, frame_detected)
+        draw_fps(cap, frame_tracked)
         out_detect.write(frame_detected)
         out_track.write(frame_tracked)
 
@@ -176,7 +173,7 @@ def main():
     out_detect.release()
     out_track.release()
     cv2.destroyAllWindows()
-    print(f"Tracking results are saved in {OUTPUT_PATH}out_track_{num_track}.mp4")
+    print(f"Tracking results are saved in {OUTPUT_PATH}out_track_{num_track}_frcnn.mp4")
 
 if __name__ == "__main__":
     main()
