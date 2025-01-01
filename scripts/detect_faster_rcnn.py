@@ -33,10 +33,10 @@ def show_preds(image, image_tensor, preds, output_dir="output", threshold=0.5, c
     boxes = preds[0]['boxes']
     labels = preds[0]['labels']
     scores = preds[0]['scores']
-    # keep = non_max_suppression(boxes, scores, iou_threshold=0.1)
-    # boxes = boxes[keep]
-    # scores = scores[keep]
-    # labels = labels[keep]
+    keep = non_max_suppression(boxes, scores, iou_threshold=0.3)
+    boxes = boxes[keep]
+    scores = scores[keep]
+    labels = labels[keep]
 
     image_tensor = image_tensor.squeeze(0).permute(1, 2, 0).cpu().numpy()
     image = np.array(image)

@@ -4,7 +4,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from parsers.parser_tracker import parse_args
 from utils.yaml_helper import read_yaml
-from test_another_name.byte_tracker import BYTETracker
+from trackers.byte_tracker import BYTETracker
 
 
 import cv2

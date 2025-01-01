@@ -11,7 +11,8 @@ from PIL import Image
 
 from models.FASTER_RCNN import FASTER_RCNN
 from utils.yaml_helper import read_yaml
-from test_another_name.byte_tracker import BYTETracker
+from utils.function import non_max_suppression
+from trackers.byte_tracker import BYTETracker
 
 # Argument parser
 parser = argparse.ArgumentParser(description="Parser for Faster-RCNN tracking")
@@ -116,7 +117,12 @@ def main():
         boxes = preds[0]['boxes']
         labels = preds[0]['labels']
         scores = preds[0]['scores']
-
+        # post-processing
+        keep = non_max_suppression(boxes, scores, iou_threshold=0.3)
+        boxes = boxes[keep]
+        scores = scores[keep]
+        labels = labels[keep]
+        
         detections = []
         frame_detected = frame.copy()
         for i in range(boxes.shape[0]):
