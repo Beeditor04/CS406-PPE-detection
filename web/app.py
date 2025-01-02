@@ -114,8 +114,8 @@ def main():
     CLASS_NAMES = ["Hardhat", "NO-Hardhat", "Safety Vest", "NO-Safety Vest", "Gloves", "NO-Gloves", "Person"]
 
     # model = load_model("pretrain_new_data.pt")
-    model_yolo = "weights/best_yolo.pt"
-    model_frcnn = "weights/best_faster_rcnn.pt"
+    model_yolo = "web/weights/best_yolo.pt"
+    model_frcnn = "web/weights/best_faster_rcnn.pt"
     # Tải lên file ảnh hoặc video
     uploaded_file = st.file_uploader(label = "Upload Image or Video", type = ["jpg", "jpeg", "png", "mp4"])
     if uploaded_file:
@@ -134,7 +134,7 @@ def main():
             # st.image(drawn_image, caption="Predicted Image", use_container_width=True)
             # st.write("### Download Processed Image")
             image = uploaded_file_2_cv_image(uploaded_file)
-            # detection_result, violation_result = inference_yolo(weights=model, img_path=image, class_names=CLASS_NAMES, detect_thresh=0.5)
+            # detection_result, violation_result = inference_yolo(weights=model_yolo, img_path=image, class_names=CLASS_NAMES, detect_thresh=0.5)
             detection_result, violation_result = inference_faster_rcnn(weights=model_frcnn, img_path=image, class_names=CLASS_NAMES, detect_thresh=0.5)
             #! show image results
             col1, col2 = st.columns(2)
