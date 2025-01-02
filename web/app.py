@@ -114,8 +114,8 @@ def main():
     CLASS_NAMES = ["Hardhat", "NO-Hardhat", "Safety Vest", "NO-Safety Vest", "Gloves", "NO-Gloves", "Person"]
 
     # model = load_model("pretrain_new_data.pt")
-    model_yolo = "web/weights/best_yolo.pt"
-    model_frcnn = "web/weights/best_faster_rcnn.pt"
+    model_yolo = "weights/best_yolo.pt"
+    model_frcnn = "weights/best_faster_rcnn.pt"
     # Tải lên file ảnh hoặc video
     uploaded_file = st.file_uploader(label = "Upload Image or Video", type = ["jpg", "jpeg", "png", "mp4"])
     if uploaded_file:

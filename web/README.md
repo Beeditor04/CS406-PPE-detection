@@ -7,13 +7,9 @@ git clone https://github.com/Beeditor04/CS406-PPE-detection.git
 ```
 pip install -r requirements.txt
 ```
-* move to web folder
-```
-cd CS406-PPE-detection/web
-```
 * deploy web on streamlit
 ```
-streamlit run app.py
+streamlit run web/app.py
 ```
 
 ## Web funtion:

@@ -10,7 +10,7 @@ python setup.py develop
 you can download our `faster-rcnn` and `yolov5n` model here:
 - `faster-rcnn`: [drive](https://drive.google.com/file/d/1ciFtmC6eh0wRoK3yU4rS1JlmdH_ee01i/view?usp=drive_link)
 - `yolov5n`: [drive](https://drive.google.com/file/d/1VuorH4fgbafaroALJNafHeSMQdweAHsz/view?usp=drive_link)
-And then put it in `web/weights`.
+And then put it in folder `weights`.
 # Deploy web
 ```
 streamlit run web/app.py
