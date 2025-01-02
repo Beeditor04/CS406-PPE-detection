@@ -9,3 +9,5 @@ pycocotools
 cython_bbox
 lap
 ultralytics
+streamlit
+numpy

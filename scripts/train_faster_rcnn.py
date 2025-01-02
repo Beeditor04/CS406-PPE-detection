@@ -6,9 +6,7 @@ import torch
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from torchvision import models 
 from torch.optim import SGD
-from torchvision import transforms
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
