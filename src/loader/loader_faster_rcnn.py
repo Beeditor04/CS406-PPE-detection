@@ -81,6 +81,7 @@ def get_preprocessed_data(data_path, args):
             transforms.Resize((args.resize, args.resize)),
             transforms.RandomApply([transforms.ColorJitter(brightness=0.1, contrast=0.2, saturation=0.2, hue=0.1)], p=0.3),
             transforms.RandomRotation(degrees=5),
+            transforms.RandomApply([transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 5))], p=0.3),  # Add Gaussian Blur
             transforms.ToTensor(),
             normalize
         ])

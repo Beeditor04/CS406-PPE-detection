@@ -7,13 +7,12 @@ sys.path.append(ROOT_DIR)
 
 import streamlit as st
 from ultralytics import YOLO
-from PIL import Image, ImageDraw
+from PIL import Image
 import cv2
 import numpy as np
 import tempfile
 from io import BytesIO
-from scripts.detect_yolo import inference as inference_yolo
-from scripts.detect_faster_rcnn import inference as inference_faster_rcnn
+from scripts.detect_faster_rcnn import inference
 from scripts.tracker_yolo import tracking
 # Set up page
 st.set_page_config(layout="wide", page_title="PPE Detection Web")
@@ -134,21 +133,20 @@ def main():
             # st.image(drawn_image, caption="Predicted Image", use_container_width=True)
             # st.write("### Download Processed Image")
             image = uploaded_file_2_cv_image(uploaded_file)
-            # detection_result, violation_result = inference_yolo(weights=model_yolo, img_path=image, class_names=CLASS_NAMES, detect_thresh=0.5)
-            detection_result, violation_result = inference_faster_rcnn(weights=model_frcnn, img_path=image, class_names=CLASS_NAMES, detect_thresh=0.5)
+            detection_result, violation_result = inference(weights=model_frcnn, img_path=image, class_names=CLASS_NAMES, detect_thresh=0.5)
             #! show image results
             col1, col2 = st.columns(2)
             with col1:
                 st.subheader("Detection Result")
                 with st.container():
                     st.markdown('<div class="image-container">', unsafe_allow_html=True)
-                    st.image(detection_result, caption="Detection Result", width=5000)  
+                    st.image(detection_result, caption="Detection Result", width=400)  
                     st.markdown('</div>', unsafe_allow_html=True)
             with col2:
                 st.subheader("Violation Detection Result")
                 with st.container():
                     st.markdown('<div class="image-container">', unsafe_allow_html=True)
-                    st.image(violation_result, caption="Violation Detection", width=5000) 
+                    st.image(violation_result, caption="Violation Detection", width=400) 
                     st.markdown('</div>', unsafe_allow_html=True)
 
             #! Download processed image
