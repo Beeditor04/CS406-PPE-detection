@@ -15,17 +15,17 @@ from utils.function import draw_bbox
 from utils.yaml_helper import read_yaml
 from utils.detect_css_violations import detect_css_violations, STrack
 
-DETECT_THRESH = 0.5
-parse  = argparse.ArgumentParser(description="Parser for Faster-RCNN inference")
-parse.add_argument("--weights", type=str, default="weights/faster-rcnn.pt", help="Path to weights weights")
-parse.add_argument("--img_path", type=str, default="sample/1.jpg", help="Path to source image")
-parse.add_argument("--yaml_class", type=str, default="data/data-ppe.yaml", help="Path to class yaml")
-args = parse.parse_args()
 
-yaml_class = read_yaml(args.yaml_class)
-CLASS_NAMES = yaml_class["names"]
-
-def inference(device, weights="weights/faster-rcnn.pt", img_path="sample/1.jpg"):
+def inference(
+        weights="weights/faster-rcnn.pt", 
+        img_path="sample/1.jpg",
+        class_names=None,
+        detect_thresh=0.5,
+        device="cpu"
+        ):
+    CLASS_NAMES = class_names
+    DETECT_THRESH = detect_thresh
+    print(img_path, CLASS_NAMES, DETECT_THRESH, device, weights)
     model = FASTER_RCNN(7)
     model.model.load_state_dict(torch.load(weights))
     model.model.to(device)
@@ -39,14 +39,26 @@ def inference(device, weights="weights/faster-rcnn.pt", img_path="sample/1.jpg")
         normalize
     ])
     
+        # check if img_path is a file path or an image
+    if isinstance(img_path, str):
+        image = cv2.imread(img_path) # cv2 format
+        if image is None:
+            raise FileNotFoundError(f"Image file '{img_path}' not found.")
+    elif isinstance(img_path, np.ndarray):
+        image = img_path
+    else:
+        raise ValueError("img_path must be a string (file path) or a numpy array (image).")
+    
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    pil_image = Image.fromarray(image)
+    image_tensor = transform(pil_image).unsqueeze(0).to(device)
+    image = cv2.resize(image, (640, 640))
+
     #!----- Detection
     with torch.no_grad():
-        image = Image.open(img_path).convert('RGB') # for faster_rcnn
-        image_tensor = transform(image).unsqueeze(0).to(device)
         preds = model.model(image_tensor)
         preds = [{k: v.to(device) for k, v in t.items()} for t in preds]
-        image = cv2.imread(img_path) # back to cv2
-        image = cv2.resize(image, (640, 640))
+
 
 
     #!------------ Post-processing: filter low score, nms
@@ -59,6 +71,7 @@ def inference(device, weights="weights/faster-rcnn.pt", img_path="sample/1.jpg")
     scores = scores[keep]
     labels = labels[keep]
 
+    #----
     per_detections = []
     obj_detections = []
     image_detection = image.copy()
@@ -71,7 +84,7 @@ def inference(device, weights="weights/faster-rcnn.pt", img_path="sample/1.jpg")
         score = scores[i].cpu().numpy()
         x1, y1, x2, y2 = map(int, box)
         class_id = int(label)
-        draw_bbox(image_detection, CLASS_NAMES[class_id], x1, y1, x2, y2, score, type='detect')
+        draw_bbox(image_detection, class_id, x1, y1, x2, y2, score, type='detect', class_names=CLASS_NAMES)
         # Detections bbox format for tracker
         if CLASS_NAMES[class_id] == "Person": # only track person
             per_detections.append([x1, y1, x2, y2, score])
@@ -96,7 +109,28 @@ def inference(device, weights="weights/faster-rcnn.pt", img_path="sample/1.jpg")
         x1, y1, w, h = map(int, tlwh)
         x2, y2 = x1 + w, y1 + h
         draw_bbox(image_violate, tid, x1, y1, x2, y2, t.score, missing=t.missing, type='violate', class_names=CLASS_NAMES)
+    return image_detection, image_violate
 
+if __name__ == "__main__":
+    parse  = argparse.ArgumentParser(description="Parser for Faster-RCNN inference")
+    parse.add_argument("--weights", type=str, default="weights/faster-rcnn.pt", help="Path to weights weights")
+    parse.add_argument("--img_path", type=str, default="sample/1.jpg", help="Path to source image")
+    parse.add_argument("--yaml_class", type=str, default="data/data-ppe.yaml", help="Path to class yaml")
+    
+    args = parse.parse_args()
+    yaml_class = read_yaml(args.yaml_class)
+    CLASS_NAMES = yaml_class["names"]
+    DETECT_THRESH = 0.5
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    image_detection, image_violate = inference(
+        device=device, weights=args.weights, 
+        img_path=args.img_path, 
+        class_names=CLASS_NAMES, 
+        detect_thresh=DETECT_THRESH)
+    
+    image_detection = cv2.cvtColor(image_detection, cv2.COLOR_RGB2BGR)
+    image_violate = cv2.cvtColor(image_violate, cv2.COLOR_RGB2BGR)
     # Save the image
     output_dir = "output"
     if not os.path.exists(output_dir):
@@ -112,7 +146,3 @@ def inference(device, weights="weights/faster-rcnn.pt", img_path="sample/1.jpg")
     output_path = os.path.join(output_dir, f"inference-{num}-frcnn-violate.jpg")
     cv2.imwrite(output_path, image_violate)
     print(f"Saved violate detection result to {output_path}") 
-
-if __name__ == "__main__":
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    inference(device, weights=args.weights, img_path=args.img_path)

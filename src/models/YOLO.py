@@ -1,7 +1,7 @@
 from ultralytics import YOLO
 import os
 
-class YOLO_MODEL(object):
+class yolo(object):
     def __init__(self, weights):
         if not os.path.exists(weights):
             raise FileNotFoundError(f"Weights file '{weights}' not found.")

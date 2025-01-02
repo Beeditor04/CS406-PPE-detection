@@ -127,7 +127,7 @@ def main():
                 
             else:
                 obj_detections.append([x1, y1, x2, y2, score, class_id])
-            draw_bbox(frame_detected, CLASS_NAMES[class_id], x1, y1, x2, y2, score, type='detect')
+            draw_bbox(frame_detected, CLASS_NAMES[class_id], x1, y1, x2, y2, score, type='detect', class_names=CLASS_NAMES)
 
         # Convert detections to numpy array
         if per_detections:

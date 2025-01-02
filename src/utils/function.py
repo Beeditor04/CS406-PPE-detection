@@ -1,5 +1,25 @@
 import torch
 import cv2
+from utils.yaml_helper import read_yaml
+COLORS  = [
+        (128, 0, 0),    # Maroon
+        (128, 128, 0),  # Olive
+        (0, 128, 128),  # Teal
+        (192, 192, 192),# Silver
+        (128, 128, 128),# Gray
+        (0, 0, 128),    # Navy
+        (255, 255, 0),  # Yellow
+        (0, 128, 0),    # Dark Green
+        (128, 0, 128),  # Purple
+        (255, 0, 255),  # Magenta
+        (0, 255, 255),  # Cyan
+        (255, 165, 0),  # Orange
+        (255, 192, 203),# Pink
+        (255, 222, 173),# Navajo White
+        (173, 216, 230),# Light Blue
+        (240, 230, 140),# Khaki
+    ]
+
 def associate_score(person_box, obj_box):
     # Find intersection coordinates
     x1 = max(person_box[0], obj_box[0])
@@ -103,18 +123,21 @@ def draw_bbox(frame, id, x1, y1, x2, y2, conf, missing=None, type='detect', clas
                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
         
     elif type == "violate":
-        color = (0,0,255) if missing else (0,255,0)
+        color = (255,0,0) if missing else (0, 255, 0)
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-        
-        text = f'Person {id}'
         if missing:
-            text += f' missing: {",".join([str(class_names[m]) for m in missing])}'
-        cv2.putText(frame, text, (x1, y1-10), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+            text = f'ID {id} w NO:'
+            cv2.putText(frame, text, (x1, y1-25), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 2)
+            missing = ", ".join([str(class_names[m]) for m in missing])
+            cv2.putText(frame, missing, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        else:
+            text = f'ID {id} OKE'
+            cv2.putText(frame, text, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
         
     elif type == "detect":
         # Detection boxes
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 2)
-        cv2.putText(frame, f"{id}: {conf:.2f}", 
-                   (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
+        cv2.rectangle(frame, (x1, y1), (x2, y2), COLORS[id], 2)
+        cv2.putText(frame, f"{class_names[id]}: {conf:.2f}", 
+                   (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLORS[id], 2)
         

@@ -1,54 +1,13 @@
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
-
-from parsers.parser_tracker import parse_args
-from utils.yaml_helper import read_yaml
-from utils.function import non_max_suppression
-from utils.function import draw_bbox, draw_fps
-from utils.detect_css_violations import detect_css_violations
-from trackers.byte_tracker import BYTETracker
-
-import torch
 import cv2
 import numpy as np
 from ultralytics import YOLO
-
-# SETUP parse
-args = parse_args()
-
-# yaml class
-yaml_class = read_yaml(args.yaml_class)
-CLASS_NAMES = yaml_class["names"]
-
-# prepare output dir
-if not os.path.exists("output/videos/"):
-    if not os.path.exists("output/"):
-        os.makedirs("output/")
-    os.makedirs("output/videos")
-
-# SETUP video
-OUTPUT_PATH = "output/videos/"
-cap = cv2.VideoCapture(args.vid_dir)
-width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-# check if any output videos exist
-num = 1
-while os.path.exists(os.path.join(OUTPUT_PATH, f"out_track_{num}_yolo.mp4")):
-    num += 1
-out_track = cv2.VideoWriter(os.path.join(OUTPUT_PATH, f"out_track_{num}_yolo.mp4"), cv2.VideoWriter_fourcc(*'mp4v'), int(cap.get(cv2.CAP_PROP_FPS)), (width, height))
-out_detect = cv2.VideoWriter(os.path.join(OUTPUT_PATH, f"out_detect_{num}_yolo.mp4"), cv2.VideoWriter_fourcc(*'mp4v'), int(cap.get(cv2.CAP_PROP_FPS)), (width, height))
-out_violate = cv2.VideoWriter(os.path.join(OUTPUT_PATH, f"out_violate_{num}_yolo.mp4"), cv2.VideoWriter_fourcc(*'mp4v'), int(cap.get(cv2.CAP_PROP_FPS)), (width, height))
-
-# setup params
-ASPECT_RATIO_THRESH = 0.6  # more condition for vertical box if you like
-MIN_BOX_AREA = 100 # minimum area of the trcking box to be considered
-TRACK_THRESH= 0.5 # tracking threshold
-TRACK_BUFFER= 30 # frame to keep track of the object
-MATCH_THRESH= 0.85 # matching threshold - similarity alogrithm
-FUSE_SCORE= False 
-DETECT_THRESH = 0.5
+from parsers.parser_tracker import parse_args
+from utils.yaml_helper import read_yaml
+from utils.function import non_max_suppression, draw_bbox, draw_fps
+from utils.detect_css_violations import detect_css_violations
+from trackers.byte_tracker import BYTETracker
 
 class TrackerArgs:
     def __init__(self, track_thresh, track_buffer, match_thresh, fuse_score):
@@ -58,31 +17,57 @@ class TrackerArgs:
         self.fuse_score = fuse_score
         self.mot20 = False
 
+def tracking(weights="weights/best_yolo.pt", video_path=None, class_names=None, detect_thresh=0.3, device="cpu"):
+    # Setup params
+    TRACK_THRESH = 0.5
+    TRACK_BUFFER = 30
+    MATCH_THRESH = 0.85
+    FUSE_SCORE = False
+    MIN_BOX_AREA = 100
+    DETECT_THRESH = detect_thresh
+    CLASS_NAMES = class_names
 
-# For future these above functions can be moved to a separate file
-#================================================================================================
-def main():
-    weights = args.weights
-    # model = YOLO_MODEL(weights)
-    model = YOLO(weights, DETECT_THRESH)
-    tracker_args = TrackerArgs(
-        track_thresh=TRACK_THRESH,
-        track_buffer=TRACK_BUFFER,
-        match_thresh=MATCH_THRESH,
-        fuse_score=FUSE_SCORE
-    )
+    # Initialize model and tracker
+    model = YOLO(weights, detect_thresh)
+    tracker_args = TrackerArgs(TRACK_THRESH, TRACK_BUFFER, MATCH_THRESH, FUSE_SCORE)
     tracker = BYTETracker(tracker_args)
-    frame_id = 0
+
+    # Open video
+    cap = cv2.VideoCapture(video_path)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+
+    # Create output directory if it doesn't exist
+    OUTPUT_PATH = "output/videos/"
+    if not os.path.exists(OUTPUT_PATH):
+        if not os.path.exists("output/"):
+            os.makedirs("output/")
+        os.makedirs("output/videos")
+
+    # Create temporary output videos
+    num = 1
+    while os.path.exists(os.path.join(OUTPUT_PATH, f"out_track_{num}_yolo.mp4")):
+        num += 1
+
+    detect_path = os.path.join(OUTPUT_PATH, f"out_detect_{num}_yolo.mp4")
+    track_path = os.path.join(OUTPUT_PATH, f"out_track_{num}_yolo.mp4")
+    violate_path = os.path.join(OUTPUT_PATH, f"out_violate_{num}_yolo.mp4")
+
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out_detect = cv2.VideoWriter(detect_path, fourcc, fps, (width, height))
+    out_track = cv2.VideoWriter(track_path, fourcc, fps, (width, height))
+    out_violate = cv2.VideoWriter(violate_path, fourcc, fps, (width, height))
 
     while True:
         ret, frame = cap.read()
         if not ret:
             break
-        #!---------- Detect
-        # detect_results = model.detect(frame) # return xyxy format
-        detect_results = model(frame) # return xyxy format
 
-        #!------------ Post-processing: filter low score, nms
+        # Detect
+        detect_results = model(frame)
+
+        # Post-processing: filter low score, nms
         boxes = []
         scores = []
         labels = []
@@ -99,7 +84,6 @@ def main():
         scores = [scores[i] for i in keep]
         labels = [labels[i] for i in keep]
 
-        #----
         per_detections = []
         obj_detections = []
         frame_detected = frame.copy()
@@ -107,64 +91,60 @@ def main():
             x1, y1, x2, y2 = map(int, boxes[i])
             class_id = int(labels[i])
             score = float(scores[i])
-            
-            # Detections bbox format for tracker
-            if CLASS_NAMES[class_id] == "Person": # only track person
+
+            if CLASS_NAMES[class_id] == "Person":
                 per_detections.append([x1, y1, x2, y2, score])
-                
             else:
                 obj_detections.append([x1, y1, x2, y2, score, class_id])
-            draw_bbox(frame_detected, CLASS_NAMES[class_id], x1, y1, x2, y2, score, type='detect')
+            draw_bbox(frame_detected, class_id, x1, y1, x2, y2, score, type='detect', class_names=CLASS_NAMES)
 
-
-        # Convert per_detections to numpy array
         if per_detections:
             per_detections = np.array(per_detections)
         else:
             per_detections = np.empty((0, 5))
-        
-        #! Update tracker with per_detections format
-        online_targets = tracker.update(per_detections, [height, width], [height, width]) #img_info and img_size is for scaling img, if not then just pass [height, width]
 
-        online_targets = detect_css_violations(online_targets, obj_detections) #! CSS violation
-        # Draw tracked objects
+        online_targets = tracker.update(per_detections, [height, width], [height, width])
+
+        online_targets = detect_css_violations(online_targets, obj_detections)
         frame_tracked = frame.copy()
-        frame_violated  = frame.copy()
+        frame_violated = frame.copy()
         for t in online_targets:
             tlwh = t.tlwh
             tid = t.track_id
-            print("Missing:", t.missing)
-            #* more conditions to filter out unwanted boxes
-            # vertical = tlwh[2] / tlwh[3] > aspect_ratio_thresh
-            # if tlwh[2] * tlwh[3] > min_box_area and not vertical:
 
             if tlwh[2] * tlwh[3] > MIN_BOX_AREA:
-                # # save results
-                # tracking_results.append(
-                #     f"{frame_id},{tid},{tlwh[0]:.2f},{tlwh[1]:.2f},{tlwh[2]:.2f},{tlwh[3]:.2f},{t.score:.2f},-1,-1,-1\n"
-                # )
-                # Draw the bounding box
                 x1, y1, w, h = map(int, tlwh)
                 x2, y2 = x1 + w, y1 + h
                 draw_bbox(frame_tracked, tid, x1, y1, x2, y2, t.score, missing=t.missing, type='track')
                 draw_bbox(frame_violated, tid, x1, y1, x2, y2, t.score, missing=t.missing, type='violate', class_names=CLASS_NAMES)
 
-        # save and display the frame
         draw_fps(cap, frame_detected)
         draw_fps(cap, frame_tracked)
         draw_fps(cap, frame_violated)
         out_detect.write(frame_detected)
         out_track.write(frame_tracked)
         out_violate.write(frame_violated)
-        frame_id += 1
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
     cap.release()
     out_detect.release()
     out_track.release()
-    cv2.destroyAllWindows()
-    print(f"Tracking results are saved in {OUTPUT_PATH}out_track_{num}_yolo.mp4")
+    out_violate.release()
+
+    return detect_path, track_path, violate_path
 
 if __name__ == "__main__":
-    main()
+    # SETUP parse
+    args = parse_args()
+
+    # yaml class
+    yaml_class = read_yaml(args.yaml_class)
+    CLASS_NAMES = yaml_class["names"]
+
+    # Call tracking function
+    tracking(
+        weights=args.weights,
+        video_path=args.vid_dir,
+        class_names=CLASS_NAMES,
+        detect_thresh=args.detect_thresh,
+        device=args.device
+    )

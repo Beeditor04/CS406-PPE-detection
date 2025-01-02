@@ -1,10 +1,11 @@
 torch 
 torchvision 
 torchaudio
+torchmetrics
 pyyaml
 tqdm
 Pillow
-opencv-python
+opencv-python-headless
 pycocotools
 cython_bbox
 lap

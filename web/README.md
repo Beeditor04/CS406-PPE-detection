@@ -3,13 +3,13 @@
 ```
 git clone https://github.com/Beeditor04/CS406-PPE-detection.git
 ```
-* move to web folder
-```
-cd CS406-PPE-detection/web
-```
 * install dependencies
 ```
 pip install -r requirements.txt
+```
+* move to web folder
+```
+cd CS406-PPE-detection/web
 ```
 * deploy web on streamlit
 ```

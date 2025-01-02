@@ -15,35 +15,44 @@ from utils.function import non_max_suppression
 from utils.function import draw_bbox
 from utils.detect_css_violations import detect_css_violations
 from utils.detect_css_violations import STrack
-# Argument parser
-parser = argparse.ArgumentParser(description="Parser for YOLO inference")
-parser.add_argument("--weights", type=str, default="weights/yolo.pt", help="Path to pretrained weights")
-parser.add_argument("--img_path", type=str, default="sample/1.jpg", help="Path to source image")
-parser.add_argument("--yaml_class", type=str, default="data/data-ppe.yaml", help="Path to class yaml file")
 
-args = parser.parse_args()
-yaml_class = read_yaml(args.yaml_class)
-CLASS_NAMES = yaml_class["names"]
-DETECT_THRESH = 0.4
-
-def inference(device, weights, img_path):
+def inference(
+        weights="weights/best_yolo.pt", 
+        img_path="sample/1.jpg", 
+        class_names=None,
+        detect_thresh=0.3,
+        device="cpu"
+        ):
+    print("weights:", weights, "img_path:", img_path, "class_names:", class_names, "detect_thresh:", detect_thresh, "device:", device)
+    CLASS_NAMES = class_names
+    DETECT_THRESH = detect_thresh
+    
     model = YOLO(weights, DETECT_THRESH)
     transform = transforms.Compose([
         transforms.Resize((640, 640)),
-        transforms.ToTensor(),
+        transforms.ToTensor(),  
     ])
-    # load img
-    image = cv2.imread(img_path)
-    if image is None:
-        raise FileNotFoundError(f"Image file '{img_path}' not found.")
     
-    # Perform inference
+    # check if img_path is a file path or an image
+    if isinstance(img_path, str):
+        image = cv2.imread(img_path) # cv2 format
+        if image is None:
+            raise FileNotFoundError(f"Image file '{img_path}' not found.")
+    elif isinstance(img_path, np.ndarray):
+        image = img_path
+    else:
+        raise ValueError("img_path must be a string (file path) or a numpy array (image).")
+    
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    pil_image = Image.fromarray(image)
+    image_tensor = transform(pil_image).unsqueeze(0).to(device)
+    image = cv2.resize(image, (640, 640))
+    # load img and perform inference
+
+    #!----- Detection
     with torch.no_grad():
-        image = Image.open(img_path).convert('RGB') # for faster_rcnn
-        image_tensor = transform(image).unsqueeze(0).to(device)
         detect_results = model(image_tensor)
-        image = cv2.imread(img_path) # back to cv2
-        image = cv2.resize(image, (640, 640))
+
     
     #!------------ Post-processing: filter low score, nms
     boxes = []
@@ -76,19 +85,14 @@ def inference(device, weights, img_path):
             
         else:
             obj_detections.append([x1, y1, x2, y2, score, class_id])
-        draw_bbox(image_detection, CLASS_NAMES[class_id], x1, y1, x2, y2, score, type='detect')
+        draw_bbox(image_detection, class_id, x1, y1, x2, y2, score, type='detect', class_names=CLASS_NAMES)
     
-    ## construct to detect_css_violation format
+    ##!----- CSS violation
     online_targets = []
     for i, t in enumerate(per_detections):
         tlwh = [t[0], t[1], t[2]-t[0], t[3]-t[1]] # xyxy to tlwh
         online_targets.append(STrack(tlwh, t[4], i))
     
-    # Convert per_detections to numpy array
-    if per_detections:
-        per_detections = np.array(per_detections)
-    else:
-        per_detections = np.empty((0, 5))
 
     ## CSS violation
     online_targets = detect_css_violations(online_targets, obj_detections) #! CSS violation
@@ -101,13 +105,32 @@ def inference(device, weights, img_path):
         x1, y1, w, h = map(int, tlwh)
         x2, y2 = x1 + w, y1 + h
         draw_bbox(image_violate, tid, x1, y1, x2, y2, t.score, missing=t.missing, type='violate', class_names=CLASS_NAMES)
+    
+    return image_detection, image_violate
 
+if __name__ == "__main__":
+# Argument parser
+    parser = argparse.ArgumentParser(description="Parser for YOLO inference")
+    parser.add_argument("--weights", type=str, default="weights/yolo.pt", help="Path to pretrained weights")
+    parser.add_argument("--img_path", type=str, default="sample/1.jpg", help="Path to source image")
+    parser.add_argument("--yaml_class", type=str, default="data/data-ppe.yaml", help="Path to class yaml file")
+
+    args = parser.parse_args()
+    yaml_class = read_yaml(args.yaml_class)
+    CLASS_NAMES = yaml_class["names"]
+    DETECT_THRESH = 0.3
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    image_detection, image_violate = inference(device=device, weights=args.weights, img_path=args.img_path, class_names=CLASS_NAMES, detect_thresh=DETECT_THRESH)
+        
     # Save the image
     output_dir = "output"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     num = 1
 
+    image_detection = cv2.cvtColor(image_detection, cv2.COLOR_RGB2BGR)
+    image_violate = cv2.cvtColor(image_violate, cv2.COLOR_RGB2BGR)
     while os.path.exists(os.path.join(output_dir, f"inference-{num}-yolo.jpg")):
         num += 1
     output_path = os.path.join(output_dir, f"inference-{num}-yolo.jpg")
@@ -117,7 +140,3 @@ def inference(device, weights, img_path):
     output_path = os.path.join(output_dir, f"inference-{num}-yolo-violate.jpg")
     cv2.imwrite(output_path, image_violate)
     print(f"Saved violate detection result to {output_path}") 
-
-if __name__ == "__main__":
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    inference(device, args.weights, args.img_path)
