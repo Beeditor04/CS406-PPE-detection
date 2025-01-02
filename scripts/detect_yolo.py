@@ -5,7 +5,10 @@ import argparse
 
 import cv2
 import numpy as np
+import torch
 from ultralytics import YOLO
+from torchvision import transforms
+from PIL import Image
 
 from utils.yaml_helper import read_yaml
 from utils.function import non_max_suppression
@@ -23,16 +26,24 @@ yaml_class = read_yaml(args.yaml_class)
 CLASS_NAMES = yaml_class["names"]
 DETECT_THRESH = 0.4
 
-def inference(weights, img_path):
+def inference(device, weights, img_path):
     model = YOLO(weights, DETECT_THRESH)
-
+    transform = transforms.Compose([
+        transforms.Resize((640, 640)),
+        transforms.ToTensor(),
+    ])
     # load img
     image = cv2.imread(img_path)
     if image is None:
         raise FileNotFoundError(f"Image file '{img_path}' not found.")
     
     # Perform inference
-    detect_results = model(image)
+    with torch.no_grad():
+        image = Image.open(img_path).convert('RGB') # for faster_rcnn
+        image_tensor = transform(image).unsqueeze(0).to(device)
+        detect_results = model(image_tensor)
+        image = cv2.imread(img_path) # back to cv2
+        image = cv2.resize(image, (640, 640))
     
     #!------------ Post-processing: filter low score, nms
     boxes = []
@@ -45,12 +56,11 @@ def inference(weights, img_path):
                 boxes.append(bbox)
                 scores.append(conf)
                 labels.append(label)
-    # print(boxes, scores)
-    # keep = non_max_suppression(boxes, scores, iou_threshold=0.5)
-    # print(keep)
-    # boxes = [boxes[i] for i in keep]
-    # scores = [scores[i] for i in keep]
-    # labels = [labels[i] for i in keep]
+
+    keep = non_max_suppression(boxes, scores, iou_threshold=0.7)
+    boxes = [boxes[i] for i in keep]
+    scores = [scores[i] for i in keep]
+    labels = [labels[i] for i in keep]
 
     #----
     per_detections = []
@@ -90,7 +100,7 @@ def inference(weights, img_path):
         print("Missing:", t.missing)
         x1, y1, w, h = map(int, tlwh)
         x2, y2 = x1 + w, y1 + h
-        draw_bbox(image_violate, tid, x1, y1, x2, y2, t.score, missing=t.missing, type='track')
+        draw_bbox(image_violate, tid, x1, y1, x2, y2, t.score, missing=t.missing, type='violate', class_names=CLASS_NAMES)
 
     # Save the image
     output_dir = "output"
@@ -109,4 +119,5 @@ def inference(weights, img_path):
     print(f"Saved violate detection result to {output_path}") 
 
 if __name__ == "__main__":
-    inference(args.weights, args.img_path)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    inference(device, args.weights, args.img_path)

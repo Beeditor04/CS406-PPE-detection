@@ -22,7 +22,7 @@ python scripts/is_valid_dataset.py
 # Model
 - train faster_rcnn (remember to create `.yaml` file, put it in the folder)
 ```
-python scripts/train_faster_rcnn.py --data_dir "data/split" --batch_size 8 --epochs 10 --eval_every 5 --iter_every 5 --num_classes 7 --yaml "data/data-ppe.yaml" --lr 0.005 --resize 224 --is_aug 0
+python scripts/train_faster_rcnn.py --data_dir "data/split" --batch_size 8 --epochs 10 --eval_every 5 --iter_every 5 --num_classes 7 --yaml "data/data-ppe.yaml" --lr 0.005 --resize 640 --is_aug 0
 ```
 
 - run img faster_rcnn inference

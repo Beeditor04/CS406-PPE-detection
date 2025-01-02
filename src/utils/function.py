@@ -1,5 +1,19 @@
 import torch
 import cv2
+def associate_score(person_box, obj_box):
+    # Find intersection coordinates
+    x1 = max(person_box[0], obj_box[0])
+    y1 = max(person_box[1], obj_box[1])
+    x2 = min(person_box[2], obj_box[2])
+    y2 = min(person_box[3], obj_box[3])
+    
+    # Calculate areas
+    intersection = max(0, x2 - x1) * max(0, y2 - y1)
+    obj_area = (obj_box[2] - obj_box[0]) * (obj_box[3] - obj_box[1])
+    
+    # Return % of object box inside person box
+    return intersection / obj_area if obj_area > 0 else 0
+
 def non_max_suppression(boxes, scores, iou_threshold):
     # Input validation
     if len(boxes) == 0 or len(scores) == 0:
@@ -61,7 +75,7 @@ def non_max_suppression(boxes, scores, iou_threshold):
         inds = mask.nonzero().reshape(-1)
         order = order[inds + 1]
 
-    return 
+    return keep
 
 def remove_invalid_boxes(targets):
     valid_targets = []
@@ -80,28 +94,27 @@ def draw_fps(cap, frame):
     cv2.putText(frame, fps, (40, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
     return frame
 
-def draw_bbox(frame, id, x1, y1, x2, y2, conf, missing=None, type='detect', debug=None):
+def draw_bbox(frame, id, x1, y1, x2, y2, conf, missing=None, type='detect', class_names=None):
     if type == "track":
-        # Draw red box for violations, green for compliant
+        color = (0,254,255)
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+        text = f'ID: {id}, Score: {conf:.2f}'
+        cv2.putText(frame, text, (x1, y1-10), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        
+    elif type == "violate":
         color = (0,0,255) if missing else (0,255,0)
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
         
-        # Show ID, score and missing equipment
-        text = f'ID: {id}, Score: {conf:.2f}'
+        text = f'Person {id}'
         if missing:
-            text += f' Missing: {",".join([str(m) for m in missing])}'
+            text += f' missing: {",".join([str(class_names[m]) for m in missing])}'
         cv2.putText(frame, text, (x1, y1-10), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-    else:
-        # cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 2)
-        # cv2.putText(frame, f"{id}: {conf:.2f}", 
-        #    (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0,255,0), 2)
-        if debug == "p":
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (255,0,0), 2)
-            cv2.putText(frame, f"{id}: {conf:.2f}", 
-                   (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255,0,0), 2)
-        else:
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 2)
-            cv2.putText(frame, f"{id}: {conf:.2f}", 
-               (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0,255,0), 2)
+        
+    elif type == "detect":
+        # Detection boxes
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 2)
+        cv2.putText(frame, f"{id}: {conf:.2f}", 
+                   (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
         

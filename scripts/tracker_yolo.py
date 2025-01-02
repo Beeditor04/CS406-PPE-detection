@@ -4,7 +4,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from parsers.parser_tracker import parse_args
 from utils.yaml_helper import read_yaml
-from utils.function import non_max_suppression, associate_score
+from utils.function import non_max_suppression
 from utils.function import draw_bbox, draw_fps
 from utils.detect_css_violations import detect_css_violations
 from trackers.byte_tracker import BYTETracker
@@ -34,14 +34,12 @@ width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
 # check if any output videos exist
-num_track = 1
-num_detect = 1
-while os.path.exists(os.path.join(OUTPUT_PATH, f"out_track_{num_track}_yolo.mp4")):
-    num_track += 1
-while os.path.exists(os.path.join(OUTPUT_PATH, f"out_detect_{num_detect}_yolo.mp4")):
-    num_detect += 1
-out_track = cv2.VideoWriter(os.path.join(OUTPUT_PATH, f"out_track_{num_track}_yolo.mp4"), cv2.VideoWriter_fourcc(*'mp4v'), int(cap.get(cv2.CAP_PROP_FPS)), (width, height))
-out_detect = cv2.VideoWriter(os.path.join(OUTPUT_PATH, f"out_detect_{num_detect}_yolo.mp4"), cv2.VideoWriter_fourcc(*'mp4v'), int(cap.get(cv2.CAP_PROP_FPS)), (width, height))
+num = 1
+while os.path.exists(os.path.join(OUTPUT_PATH, f"out_track_{num}_yolo.mp4")):
+    num += 1
+out_track = cv2.VideoWriter(os.path.join(OUTPUT_PATH, f"out_track_{num}_yolo.mp4"), cv2.VideoWriter_fourcc(*'mp4v'), int(cap.get(cv2.CAP_PROP_FPS)), (width, height))
+out_detect = cv2.VideoWriter(os.path.join(OUTPUT_PATH, f"out_detect_{num}_yolo.mp4"), cv2.VideoWriter_fourcc(*'mp4v'), int(cap.get(cv2.CAP_PROP_FPS)), (width, height))
+out_violate = cv2.VideoWriter(os.path.join(OUTPUT_PATH, f"out_violate_{num}_yolo.mp4"), cv2.VideoWriter_fourcc(*'mp4v'), int(cap.get(cv2.CAP_PROP_FPS)), (width, height))
 
 # setup params
 ASPECT_RATIO_THRESH = 0.6  # more condition for vertical box if you like
@@ -96,10 +94,10 @@ def main():
                     scores.append(conf)
                     labels.append(label)
 
-        # keep = non_max_suppression(torch.tensor(boxes), torch.tensor(scores), iou_threshold=0.7)
-        # boxes = [boxes[i] for i in keep]
-        # scores = [scores[i] for i in keep]
-        # labels = [labels[i] for i in keep]
+        keep = non_max_suppression(boxes, scores, iou_threshold=0.7)
+        boxes = [boxes[i] for i in keep]
+        scores = [scores[i] for i in keep]
+        labels = [labels[i] for i in keep]
 
         #----
         per_detections = []
@@ -131,6 +129,7 @@ def main():
         online_targets = detect_css_violations(online_targets, obj_detections) #! CSS violation
         # Draw tracked objects
         frame_tracked = frame.copy()
+        frame_violated  = frame.copy()
         for t in online_targets:
             tlwh = t.tlwh
             tid = t.track_id
@@ -148,13 +147,15 @@ def main():
                 x1, y1, w, h = map(int, tlwh)
                 x2, y2 = x1 + w, y1 + h
                 draw_bbox(frame_tracked, tid, x1, y1, x2, y2, t.score, missing=t.missing, type='track')
+                draw_bbox(frame_violated, tid, x1, y1, x2, y2, t.score, missing=t.missing, type='violate', class_names=CLASS_NAMES)
 
         # save and display the frame
         draw_fps(cap, frame_detected)
         draw_fps(cap, frame_tracked)
+        draw_fps(cap, frame_violated)
         out_detect.write(frame_detected)
         out_track.write(frame_tracked)
-
+        out_violate.write(frame_violated)
         frame_id += 1
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -163,7 +164,7 @@ def main():
     out_detect.release()
     out_track.release()
     cv2.destroyAllWindows()
-    print(f"Tracking results are saved in {OUTPUT_PATH}out_track_{num_track}_yolo.mp4")
+    print(f"Tracking results are saved in {OUTPUT_PATH}out_track_{num}_yolo.mp4")
 
 if __name__ == "__main__":
     main()

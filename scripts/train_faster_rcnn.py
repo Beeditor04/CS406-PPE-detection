@@ -13,9 +13,9 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from models.FASTER_RCNN import FASTER_RCNN
-from utils.data_helper import collate_fn
 from utils.metrics import compute_metrics
 from utils.yaml_helper import read_yaml
+from utils.data_helper import collate_fn
 from loader.loader_faster_rcnn import get_preprocessed_data
 from parsers.parser_faster_rcnn import parse_args
 
