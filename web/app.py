@@ -142,13 +142,13 @@ def main():
                 st.subheader("Detection Result")
                 with st.container():
                     st.markdown('<div class="image-container">', unsafe_allow_html=True)
-                    st.image(detection_result, caption="Detection Result", width=400)  
+                    st.image(detection_result, caption="Detection Result", width=5000)  
                     st.markdown('</div>', unsafe_allow_html=True)
             with col2:
                 st.subheader("Violation Detection Result")
                 with st.container():
                     st.markdown('<div class="image-container">', unsafe_allow_html=True)
-                    st.image(violation_result, caption="Violation Detection", width=400) 
+                    st.image(violation_result, caption="Violation Detection", width=5000) 
                     st.markdown('</div>', unsafe_allow_html=True)
 
             #! Download processed image
