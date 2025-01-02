@@ -6,6 +6,7 @@ __pycache__
 
 # folders
 data/*
+!data/data-ppe.yaml
 logs/*
 build/*
 dist/*

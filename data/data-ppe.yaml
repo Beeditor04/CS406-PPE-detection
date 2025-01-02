@@ -1,0 +1,14 @@
+names:
+- Hardhat
+- NO-Hardhat
+- Safety Vest
+- NO-Safety Vest
+- Gloves
+- No-Gloves
+- Person
+nc: 7
+
+## maybe fix it depends on your ass
+train: /train/images
+val: /valid/images
+test: /test/images
