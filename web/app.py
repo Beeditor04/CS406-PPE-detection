@@ -6,6 +6,7 @@ import numpy as np
 import tempfile
 import os
 from io import BytesIO
+import subprocess
 
 # Set up page
 st.set_page_config(layout="wide", page_title="PPE Detection Web")
@@ -97,38 +98,17 @@ def main():
                 video_path = temp_input.name  # Lưu tệp tạm thời
 
             st.video(video_path)
+
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            project_dir = os.path.dirname(base_dir)
+            os.chdir(project_dir)
             
-            # Chạy dự đoán trên video
-            cap = cv2.VideoCapture(video_path)
-            output_frames = []
-
-            while cap.isOpened():
-                ret, frame = cap.read()
-                if not ret:
-                    break
-
-                image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-                predictions = predict_image(model, image)
-
-                frame_with_boxes = np.array(draw_boxes(image, predictions, model))
-                output_frames.append(cv2.cvtColor(frame_with_boxes, cv2.COLOR_RGB2BGR))
-
-            cap.release()
-
-            # Lưu video predict
-            output_video_path = os.path.join(os.getcwd(), "output_video.mp4")
-            height, width, _ = output_frames[0].shape
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            out = cv2.VideoWriter(output_video_path, fourcc, 20.0, (width, height))
-
-            for frame in output_frames:
-                out.write(frame)
-            out.release()
+            # Chạy tracker_yolo.py trên video
+            command = f"py scripts/tracker_yolo.py --weights web/pretrain_new_data.pt --vid_dir {video_path}"
+            subprocess.run(command, shell=True)
 
             st.success("Video processing completed!")
-            st.write("### Download Processed Video")
-            st.download_button("Download Processed Video", open(output_video_path, "rb").read(), "output_video.mp4", "video/mp4")
-            # Xoá các tệp tạm thời sau khi hiển thị
+
             os.remove(video_path)
 
 
