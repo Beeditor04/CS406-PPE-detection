@@ -1,6 +1,9 @@
 import sys
 import os
 import cv2
+import time
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+
 import numpy as np
 from ultralytics import YOLO
 from parsers.parser_tracker import parse_args
@@ -59,11 +62,15 @@ def tracking(weights="weights/best_yolo.pt", video_path=None, class_names=None, 
     out_track = cv2.VideoWriter(track_path, fourcc, fps, (width, height))
     out_violate = cv2.VideoWriter(violate_path, fourcc, fps, (width, height))
 
+    # Initialize variables for FPS calculation
+    frame_count = 0
+    total_time = 0
+
     while True:
         ret, frame = cap.read()
         if not ret:
             break
-
+        start_time = time.time()
         # Detect
         detect_results = model(frame)
 
@@ -118,9 +125,13 @@ def tracking(weights="weights/best_yolo.pt", video_path=None, class_names=None, 
                 draw_bbox(frame_tracked, tid, x1, y1, x2, y2, t.score, missing=t.missing, type='track')
                 draw_bbox(frame_violated, tid, x1, y1, x2, y2, t.score, missing=t.missing, type='violate', class_names=CLASS_NAMES)
 
-        draw_fps(cap, frame_detected)
-        draw_fps(cap, frame_tracked)
-        draw_fps(cap, frame_violated)
+        # Calculate FPS
+        process_time = time.time() - start_time
+        fps = 1 / process_time
+
+        draw_fps(cap, frame_detected, fps)
+        draw_fps(cap, frame_tracked, fps)
+        draw_fps(cap, frame_violated, fps)
         out_detect.write(frame_detected)
         out_track.write(frame_tracked)
         out_violate.write(frame_violated)
@@ -129,7 +140,7 @@ def tracking(weights="weights/best_yolo.pt", video_path=None, class_names=None, 
     out_detect.release()
     out_track.release()
     out_violate.release()
-
+    print(f"Output videos saved at {detect_path}")
     return detect_path, track_path, violate_path
 
 if __name__ == "__main__":

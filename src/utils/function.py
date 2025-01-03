@@ -54,7 +54,7 @@ def non_max_suppression(boxes, scores, iou_threshold):
         return [0]
 
     # Get coordinates
-    x1 = boxes[:, 0]
+    x1 = boxes[:, 0] # x_min of all boxes -> (N,)
     y1 = boxes[:, 1]
     x2 = boxes[:, 2]
     y2 = boxes[:, 3]
@@ -71,7 +71,8 @@ def non_max_suppression(boxes, scores, iou_threshold):
         if order.numel() == 1:
             keep.append(order[0].item())
             break
-            
+        
+        #! box with highest score
         i = order[0].item()
         keep.append(i)
 
@@ -97,6 +98,70 @@ def non_max_suppression(boxes, scores, iou_threshold):
 
     return keep
 
+# def non_max_suppression(boxes, scores, labels, iou_threshold=0.5):
+#     # Convert inputs to tensors
+#     if not isinstance(boxes, torch.Tensor):
+#         boxes = torch.tensor(boxes)
+#     if not isinstance(scores, torch.Tensor):
+#         scores = torch.tensor(scores)
+#     if not isinstance(labels, torch.Tensor):
+#         labels = torch.tensor(labels)
+
+#     # Get unique labels
+#     unique_labels = torch.unique(labels)
+    
+#     keep_all = []
+#     for label in unique_labels:
+#         # Get indices for this class
+#         class_mask = labels == label
+#         class_boxes = boxes[class_mask]
+#         class_scores = scores[class_mask]
+        
+#         # Get coordinates
+#         x1 = class_boxes[:, 0]
+#         y1 = class_boxes[:, 1]
+#         x2 = class_boxes[:, 2]
+#         y2 = class_boxes[:, 3]
+        
+#         # Compute areas
+#         areas = (x2 - x1 + 1) * (y2 - y1 + 1)
+        
+#         # Sort by score
+#         _, order = class_scores.sort(0, descending=True)
+#         order = order.reshape(-1)
+        
+#         keep = []
+#         while order.numel() > 0:
+#             if order.numel() == 1:
+#                 keep.append(order[0].item())
+#                 break
+                
+#             i = order[0].item()
+#             keep.append(i)
+            
+#             # Compute IoU
+#             xx1 = torch.max(x1[i], x1[order[1:]])
+#             yy1 = torch.max(y1[i], y1[order[1:]])
+#             xx2 = torch.min(x2[i], x2[order[1:]])
+#             yy2 = torch.min(y2[i], y2[order[1:]])
+            
+#             w = torch.max(torch.tensor(0.0), xx2 - xx1 + 1)
+#             h = torch.max(torch.tensor(0.0), yy2 - yy1 + 1)
+#             inter = w * h
+            
+#             ovr = inter / (areas[i] + areas[order[1:]] - inter)
+#             ids = (ovr <= iou_threshold).nonzero().reshape(-1)
+            
+#             if ids.numel() == 0:
+#                 break
+#             order = order[ids + 1]
+            
+#         # Convert class-specific indices to original indices
+#         class_indices = torch.where(class_mask)[0]
+#         keep_all.extend([class_indices[k] for k in keep])
+    
+#     return keep_all
+
 def remove_invalid_boxes(targets):
     valid_targets = []
     for target in targets:
@@ -108,9 +173,8 @@ def remove_invalid_boxes(targets):
         valid_targets.append({'boxes': valid_boxes, 'labels': valid_labels})
     return valid_targets
 
-def draw_fps(cap, frame):
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    fps = ' FPS: ' + str(fps) + ' Width: ' + str(cap.get(3)) + ' Height: ' + str(cap.get(4))
+def draw_fps(cap, frame, fps):
+    fps = f' FPS: {fps:.3f}' + ' Width: ' + str(cap.get(3)) + ' Height: ' + str(cap.get(4))
     cv2.putText(frame, fps, (40, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
     return frame
 

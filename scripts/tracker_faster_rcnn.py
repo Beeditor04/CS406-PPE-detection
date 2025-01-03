@@ -83,7 +83,7 @@ def main():
         track_thresh=TRACK_THRESH,
         track_buffer=TRACK_BUFFER,
         match_thresh=MATCH_THRESH,
-        fuse_score=FUSE_SCORE
+        fuse_score=FUSE_SCORE   
     )
     tracker = BYTETracker(tracker_args)
     frame_id = 0
