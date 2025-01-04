@@ -99,66 +99,64 @@ def non_max_suppression(boxes, scores, iou_threshold):
     return keep
 
 # def non_max_suppression(boxes, scores, labels, iou_threshold=0.5):
-#     # Convert inputs to tensors
+#     device = boxes.device if isinstance(boxes, torch.Tensor) else torch.device('cpu')
 #     if not isinstance(boxes, torch.Tensor):
-#         boxes = torch.tensor(boxes)
+#         boxes = torch.tensor(boxes, device=device)
 #     if not isinstance(scores, torch.Tensor):
-#         scores = torch.tensor(scores)
+#         scores = torch.tensor(scores, device=device)
 #     if not isinstance(labels, torch.Tensor):
-#         labels = torch.tensor(labels)
+#         labels = torch.tensor(labels, device=device)
 
-#     # Get unique labels
 #     unique_labels = torch.unique(labels)
-    
 #     keep_all = []
+    
 #     for label in unique_labels:
-#         # Get indices for this class
+#         # Get boxes for this class
 #         class_mask = labels == label
 #         class_boxes = boxes[class_mask]
 #         class_scores = scores[class_mask]
+#         original_indices = torch.where(class_mask)[0]
         
+#         if len(class_boxes) == 0:
+#             continue
+            
 #         # Get coordinates
 #         x1 = class_boxes[:, 0]
 #         y1 = class_boxes[:, 1]
 #         x2 = class_boxes[:, 2]
 #         y2 = class_boxes[:, 3]
-        
-#         # Compute areas
 #         areas = (x2 - x1 + 1) * (y2 - y1 + 1)
         
-#         # Sort by score
+#         # Sort by confidence
 #         _, order = class_scores.sort(0, descending=True)
-#         order = order.reshape(-1)
-        
 #         keep = []
+        
+#         # NMS iterations
 #         while order.numel() > 0:
+#             i = order[0].item()
+#             keep.append(original_indices[i].item())
+            
 #             if order.numel() == 1:
-#                 keep.append(order[0].item())
 #                 break
                 
-#             i = order[0].item()
-#             keep.append(i)
-            
-#             # Compute IoU
+#             # Calculate IoU
 #             xx1 = torch.max(x1[i], x1[order[1:]])
 #             yy1 = torch.max(y1[i], y1[order[1:]])
 #             xx2 = torch.min(x2[i], x2[order[1:]])
 #             yy2 = torch.min(y2[i], y2[order[1:]])
             
-#             w = torch.max(torch.tensor(0.0), xx2 - xx1 + 1)
-#             h = torch.max(torch.tensor(0.0), yy2 - yy1 + 1)
+#             w = torch.max(torch.tensor(0.0, device=device), xx2 - xx1 + 1)
+#             h = torch.max(torch.tensor(0.0, device=device), yy2 - yy1 + 1)
 #             inter = w * h
-            
 #             ovr = inter / (areas[i] + areas[order[1:]] - inter)
-#             ids = (ovr <= iou_threshold).nonzero().reshape(-1)
             
+#             # Keep boxes with IoU less than threshold
+#             ids = (ovr >= iou_threshold).nonzero().reshape(-1)
 #             if ids.numel() == 0:
 #                 break
 #             order = order[ids + 1]
             
-#         # Convert class-specific indices to original indices
-#         class_indices = torch.where(class_mask)[0]
-#         keep_all.extend([class_indices[k] for k in keep])
+#         keep_all.extend(keep)
     
 #     return keep_all
 

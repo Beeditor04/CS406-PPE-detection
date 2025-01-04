@@ -3,7 +3,7 @@ import argparse
 
 # Arg for main path
 parser = argparse.ArgumentParser()
-parser.add_argument("--main", type=str, default="CSS_dataset/")
+parser.add_argument("--main", type=str, default="data/split")
 args = parser.parse_args()
 
 LABEL_PATH = "labels/"

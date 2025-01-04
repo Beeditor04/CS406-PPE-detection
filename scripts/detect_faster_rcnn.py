@@ -63,24 +63,51 @@ def inference(
 
     #!------------ Post-processing: filter low score, nms
     boxes = preds[0]['boxes']
-    labels = preds[0]['labels']
+    labels = preds[0]['labels'] - 1 # 0-based index for inference
     scores = preds[0]['scores']
+    # print("Before NMS boxes:", boxes.shape)
+    # print("Before NMS labels:", labels.shape)
+    # print("Before NMS scores:", scores.shape)
+    unique_labels = torch.unique(labels)
+    final_boxes = []
+    final_scores = []
+    final_labels = []
+    for label in unique_labels:
+        class_mask = labels == label
+        class_boxes = boxes[class_mask]
+        class_scores = scores[class_mask]
 
-    keep = non_max_suppression(boxes, scores, iou_threshold=0.7)
-    boxes = boxes[keep]
-    scores = scores[keep]
-    labels = labels[keep]
+        keep = non_max_suppression(class_boxes, class_scores, iou_threshold=0.2)
 
+        final_boxes.append(class_boxes[keep])
+        final_scores.append(class_scores[keep])
+        final_labels.append(torch.full((len(keep),), label, dtype=torch.int16))
+
+# Concatenate results
+    if final_boxes:
+        boxes = torch.cat(final_boxes)
+        scores = torch.cat(final_scores)
+        labels = torch.cat(final_labels)
+    else:
+        boxes = torch.empty((0, 4), dtype=torch.float32)
+        scores = torch.empty((0,), dtype=torch.float32)
+        labels = torch.empty((0,), dtype=torch.int16)  
+    # keep = non_max_suppression(boxes, scores, iou_threshold=0.5)
+    # keep = non_max_suppression(boxes, scores, labels, iou_threshold=0.8)
+
+    # print("After NMS boxes:", boxes.shape)
+    # print("After NMS labels:", labels.shape)
+    # print("After NMS scores:", scores.shape)
+    
     #----
     per_detections = []
     obj_detections = []
     image_detection = image.copy()
     for i in range(boxes.shape[0]):
-        print(scores[i])
         if scores[i] < DETECT_THRESH:
             continue
         box = boxes[i].cpu().numpy()
-        label = labels[i].cpu().numpy() - 1
+        label = labels[i].cpu().numpy()
         score = scores[i].cpu().numpy()
         x1, y1, x2, y2 = map(int, box)
         class_id = int(label)
@@ -97,18 +124,18 @@ def inference(
     for i, t in enumerate(per_detections):
         tlwh = [t[0], t[1], t[2]-t[0], t[3]-t[1]] # xyxy to tlwh
         online_targets.append(STrack(tlwh, t[4], i))
-
     ## CSS violation
     online_targets = detect_css_violations(online_targets, obj_detections) #! CSS violation
 
+    # Draw violated objects
     image_violate = image.copy()
     for t in online_targets:
         tlwh = t.tlwh
         tid = t.track_id
-        print("Missing:", t.missing)
+        missing = t.missing if hasattr(t, 'missing') else 0
         x1, y1, w, h = map(int, tlwh)
         x2, y2 = x1 + w, y1 + h
-        draw_bbox(image_violate, tid, x1, y1, x2, y2, t.score, missing=t.missing, type='violate', class_names=CLASS_NAMES)
+        draw_bbox(image_violate, tid, x1, y1, x2, y2, t.score, missing=missing, type='violate', class_names=CLASS_NAMES)
     return image_detection, image_violate
 
 if __name__ == "__main__":
@@ -120,7 +147,7 @@ if __name__ == "__main__":
     args = parse.parse_args()
     yaml_class = read_yaml(args.yaml_class)
     CLASS_NAMES = yaml_class["names"]
-    DETECT_THRESH = 0.5
+    DETECT_THRESH = 0.4
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     image_detection, image_violate = inference(

@@ -62,9 +62,6 @@ def tracking(weights="weights/best_yolo.pt", video_path=None, class_names=None, 
     out_track = cv2.VideoWriter(track_path, fourcc, fps, (width, height))
     out_violate = cv2.VideoWriter(violate_path, fourcc, fps, (width, height))
 
-    # Initialize variables for FPS calculation
-    frame_count = 0
-    total_time = 0
 
     while True:
         ret, frame = cap.read()
@@ -86,7 +83,7 @@ def tracking(weights="weights/best_yolo.pt", video_path=None, class_names=None, 
                     scores.append(conf)
                     labels.append(label)
 
-        keep = non_max_suppression(boxes, scores, iou_threshold=0.7)
+        keep = non_max_suppression(boxes, scores, iou_threshold=0.5)
         boxes = [boxes[i] for i in keep]
         scores = [scores[i] for i in keep]
         labels = [labels[i] for i in keep]

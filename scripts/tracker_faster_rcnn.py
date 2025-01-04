@@ -4,10 +4,11 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 import argparse
 import torch
-from torchvision import models, transforms
 import cv2
 import numpy as np
+import time
 from PIL import Image
+from torchvision import models, transforms
 
 from models.FASTER_RCNN import FASTER_RCNN
 from utils.yaml_helper import read_yaml
@@ -54,7 +55,7 @@ TRACK_THRESH = 0.5  # Tracking threshold
 TRACK_BUFFER = 30  # Frame to keep track of the object
 MATCH_THRESH = 0.85  # Matching threshold - similarity algorithm
 FUSE_SCORE = False
-DETECT_THRESH = 0.5
+DETECT_THRESH = 0.4
 
 class TrackerArgs:
     def __init__(self, track_thresh, track_buffer, match_thresh, fuse_score):
@@ -92,6 +93,7 @@ def main():
         ret, frame = cap.read()
         if not ret:
             break
+        start_time = time.time()
 
         #! Detection
         image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
@@ -102,13 +104,43 @@ def main():
 
         #!------------ Post-processing: filter low score, nms
         boxes = preds[0]['boxes']
-        labels = preds[0]['labels']
+        labels = preds[0]['labels'] - 1
         scores = preds[0]['scores']
-        keep = non_max_suppression(boxes, scores, iou_threshold=0.5)
-        boxes = boxes[keep]
-        scores = scores[keep]
-        labels = labels[keep]
+        # print("Before NMS boxes:", boxes.shape)
+        # print("Before NMS labels:", labels.shape)
+        # print("Before NMS scores:", scores.shape)
+        unique_labels = torch.unique(labels)
+        final_boxes = []
+        final_scores = []
+        final_labels = []
+        for label in unique_labels:
+            class_mask = labels == label
+            class_boxes = boxes[class_mask]
+            class_scores = scores[class_mask]
 
+            keep = non_max_suppression(class_boxes, class_scores, iou_threshold=0.2)
+
+            final_boxes.append(class_boxes[keep])
+            final_scores.append(class_scores[keep])
+            final_labels.append(torch.full((len(keep),), label, dtype=torch.int16))
+
+        # Concatenate results
+        if final_boxes:
+            boxes = torch.cat(final_boxes)
+            scores = torch.cat(final_scores)
+            labels = torch.cat(final_labels)
+        else:
+            boxes = torch.empty((0, 4), dtype=torch.float32)
+            scores = torch.empty((0,), dtype=torch.float32)
+            labels = torch.empty((0,), dtype=torch.int16)  
+        # keep = non_max_suppression(boxes, scores, iou_threshold=0.5)
+        # keep = non_max_suppression(boxes, scores, labels, iou_threshold=0.8)
+
+        # print("After NMS boxes:", boxes.shape)
+        # print("After NMS labels:", labels.shape)
+        # print("After NMS scores:", scores.shape)
+        
+        #---
         per_detections = []
         obj_detections = [] 
         frame_detected = frame.copy()
@@ -116,25 +148,25 @@ def main():
             if scores[i] < DETECT_THRESH:
                 continue
             box = boxes[i].cpu().numpy()
-            label = labels[i].cpu().numpy() - 1
+            label = labels[i].cpu().numpy()
             score = scores[i].cpu().numpy()
             x1, y1, x2, y2 = map(int, box)
             class_id = int(label)
-            
+            draw_bbox(frame_detected, class_id, x1, y1, x2, y2, score, type='detect', class_names=CLASS_NAMES)
             # Detections bbox format for tracker
             if CLASS_NAMES[class_id] == "Person": # only track person
                 per_detections.append([x1, y1, x2, y2, score])
                 
             else:
                 obj_detections.append([x1, y1, x2, y2, score, class_id])
-            draw_bbox(frame_detected, CLASS_NAMES[class_id], x1, y1, x2, y2, score, type='detect', class_names=CLASS_NAMES)
 
         # Convert detections to numpy array
         if per_detections:
             per_detections = np.array(per_detections)
         else:
             per_detections = np.empty((0, 5))
-
+        
+        ##!----- CSS violation
         #! Update tracker with detections format
         online_targets = tracker.update(per_detections, [height, width], [height, width])
         online_targets = detect_css_violations(online_targets, obj_detections) #! CSS violation
@@ -151,26 +183,26 @@ def main():
                 x1, y1, w, h = map(int, tlwh)
                 x2, y2 = x1 + w, y1 + h
                 draw_bbox(frame_tracked, tid, x1, y1, x2, y2, t.score, missing=missing, type='track')
-                draw_bbox(frame_violated, tid, x1, y1, x2, y2, t.score, missing=t.missing, type='violate', class_names=CLASS_NAMES)
+                draw_bbox(frame_violated, tid, x1, y1, x2, y2, t.score, missing=missing, type='violate', class_names=CLASS_NAMES)
 
+        # Calculate FPS
+        process_time = time.time() - start_time
+        fps = 1 / process_time
 
         # Save and display the frame
-        draw_fps(cap, frame_detected)
-        draw_fps(cap, frame_tracked)
-        draw_fps(cap, frame_violated)
+        draw_fps(cap, frame_detected, fps)
+        draw_fps(cap, frame_tracked, fps)
+        draw_fps(cap, frame_violated, fps)
         out_detect.write(frame_detected)
         out_track.write(frame_tracked)
         out_violate.write(frame_violated)
 
         frame_id += 1
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
     cap.release()
     out_detect.release()
     out_track.release()
-    cv2.destroyAllWindows()
+    out_violate.release()
     print(f"Tracking results are saved in {OUTPUT_PATH}out_track_{num}_frcnn.mp4")
 
 if __name__ == "__main__":

@@ -66,11 +66,43 @@ def inference(
                 scores.append(conf)
                 labels.append(label)
 
-    keep = non_max_suppression(boxes, scores, iou_threshold=0.7)
-    boxes = [boxes[i] for i in keep]
-    scores = [scores[i] for i in keep]
-    labels = [labels[i] for i in keep]
+    boxes = torch.tensor(boxes, dtype=torch.float16)
+    scores = torch.tensor(scores, dtype=torch.float16)
+    labels = torch.tensor(labels, dtype=torch.int64)
 
+    # print("Before NMS boxes:", boxes.shape)
+    # print("Before NMS labels:", labels.shape)
+    # print("Before NMS scores:", scores.shape)
+    unique_labels = torch.unique(labels)
+    final_boxes = []
+    final_scores = []
+    final_labels = []
+    for label in unique_labels:
+        class_mask = labels == label
+        class_boxes = boxes[class_mask]
+        class_scores = scores[class_mask]
+
+        keep = non_max_suppression(class_boxes, class_scores, iou_threshold=0.5)
+
+        final_boxes.append(class_boxes[keep])
+        final_scores.append(class_scores[keep])
+        final_labels.append(torch.full((len(keep),), label, dtype=torch.int16))
+
+# Concatenate results
+    if final_boxes:
+        boxes = torch.cat(final_boxes)
+        scores = torch.cat(final_scores)
+        labels = torch.cat(final_labels)
+    else:
+        boxes = torch.empty((0, 4), dtype=torch.float32)
+        scores = torch.empty((0,), dtype=torch.float32)
+        labels = torch.empty((0,), dtype=torch.int16)  
+    # keep = non_max_suppression(boxes, scores, iou_threshold=0.5)
+    # keep = non_max_suppression(boxes, scores, labels, iou_threshold=0.8)
+
+    # print("After NMS boxes:", boxes.shape)
+    # print("After NMS labels:", labels.shape)
+    # print("After NMS scores:", scores.shape)
     #----
     per_detections = []
     obj_detections = []
