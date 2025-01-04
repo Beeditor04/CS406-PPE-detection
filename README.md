@@ -1,5 +1,5 @@
 
-# CS406 PPE detection
+# CS406 PPE Detection Violation
 - Professor: ThS. Cáp Phạm Đình Thăng (thangcpd@uit.edu.vn)
 - Course Id: CS406.P11 (Xử lý ảnh và ứng dụng)
 
@@ -12,7 +12,7 @@
 
 ## A glimpse of the project
 ![Project Image](assets/image.png)
-> **Overview**: this project focus on detecting PPE (Hardhat, Helmet, Gloves) and classify each person if they are missing one of these
+> **Overview**: this project focus on detecting PPE (Hardhat, Helmet, Gloves) and classify each person if they are missing one of these (Violation Detection)
 - *Image*: detect + classify violation
 - *Video*: detect + track + classify violation
 # Project structure
