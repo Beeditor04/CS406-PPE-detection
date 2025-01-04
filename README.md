@@ -11,8 +11,17 @@
 | Hồ Trọng Duy Quang  | 22521200  | Member |
 
 ## A glimpse of the project
-![Project Image](assets/image.png)
-> **Overview**: this project focus on detecting PPE (Hardhat, Helmet, Gloves) and classify each person if they are missing one of these (Violation Detection)
+<div align="center">
+  <img src="assets/1.png" alt="Project Image" width="600"/>
+  <p><em>Figure 1: Overview of how Violation Detection works on image</em></p>
+</div>
+
+<div align="center">
+  <img src="assets/2.png" alt="Project Image" width="600"/>
+  <p><em>Figure 2: Overview of how Violation Detection works on video</em></p>
+</div>
+
+> **Overview**: this project focus on detecting PPE (Hardhat, Helmet, Gloves) and classify each person if they are missing one of these
 - *Image*: detect + classify violation
 - *Video*: detect + track + classify violation
 # Project structure
