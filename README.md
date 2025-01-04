@@ -6,9 +6,9 @@
 ## Team Members
 | Name                | MSSV      | Roles  |
 |---------------------|-----------|--------|
-| Nguyễn Hữu Nam      | 22521135  | Leader |
-| Nguyễn Trần Phúc    | 22521200  | Member |
-| Hồ Trọng Duy Quang  | 22520917  | Member |
+| Nguyễn Hữu Nam      | 22520917  | Leader |
+| Nguyễn Trần Phúc    | 22521135  | Member |
+| Hồ Trọng Duy Quang  | 22521200  | Member |
 
 ## A glimpse of the project
 ![Project Image](assets/image.png)
