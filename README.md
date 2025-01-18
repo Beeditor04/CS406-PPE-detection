@@ -21,9 +21,19 @@
   <p><em>Figure 2: Overview of how Violation Detection works on video</em></p>
 </div>
 
+<div align="center">
+  <img src="assets/3.png" alt="Project Image" width="600"/>
+  <p><em>Figure 3: Project pipeline</em></p>
+</div>
+
+<div align="center">
+  <img src="assets/4.png" alt="Project Image" width="600"/>
+  <p><em>Figure 4: Web demo</em></p>
+</div>
+
 > **Overview**: this project focus on detecting PPE (Hardhat, Helmet, Gloves) and classify each person if they are missing one of these
 - *Image*: detect + classify violation
-- *Video*: detect + track + classify violation
+- *Video*: detect + track + classify violation (video result: [drive](https://drive.google.com/drive/folders/15crPWioDnb8FuSfXhSJFO__1lEhy6D6j?usp=sharing))
 # Project structure
 ```python
 CS406-PPE-detection/
@@ -72,7 +82,8 @@ you can download our pretrain `faster-rcnn` and `yolov5n` model here:
 And then put it in folder `weights`.
 
 ## 3. Dataset 
-- put it in `data/`: [kaggle](https://kaggle.com/datasets/cc917aa906937756371b0386a45fd9c3ed1c8d2d3412fc3e6d5f97c724725e94)
+- SH17 dataset: [kaggle](https://www.kaggle.com/datasets/mugheesahmad/sh17-dataset-for-ppe-detection)
+- Our dataset (put it in `data/`): [kaggle](https://kaggle.com/datasets/cc917aa906937756371b0386a45fd9c3ed1c8d2d3412fc3e6d5f97c724725e94)
 - `data-ppe.yaml`: [drive](https://drive.google.com/file/d/1P9rRNMd3ErvO47f3xOn6nnsla0waxRC7/view?usp=drive_link) 
 
 # II. Deploy web

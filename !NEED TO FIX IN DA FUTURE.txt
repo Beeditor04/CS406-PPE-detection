@@ -1,0 +1,3 @@
+1. warp track_faster_rcnn.py into a usable function
+2. Create the overall detect.py by construct the output in src/models/
+3. fix non_max_suppression in track*.py
