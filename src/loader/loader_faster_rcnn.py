@@ -17,6 +17,7 @@ class CustomDataset(Dataset):
     def __len__(self):
         return len(self.image_files)
 
+    #*activate when using DataLoader
     def __getitem__(self, idx):
         # Load image
         img_name = self.image_files[idx]
@@ -66,12 +67,13 @@ class CustomDataset(Dataset):
                 boxes = torch.stack([x_min, y_min, x_max, y_max], dim=1)
 
                 # Resize bounding boxes to match the resized image
-                new_size = image.size()[1:]  # (C, H, W) -> (H, W)
+                new_size = image.size()[1:]  # (Channel, H, W) -> (H, W)
                 boxes[:, [0, 2]] = boxes[:, [0, 2]] * (new_size[1] / original_size[0])
                 boxes[:, [1, 3]] = boxes[:, [1, 3]] * (new_size[0] / original_size[1]) 
         target = {'boxes': boxes, 'labels': classes, 'image_id': torch.tensor([idx])}
         return image, target
-    
+
+# get pytorch dataset + preprocessed
 def get_preprocessed_data(data_path, args):
     weights = models.detection.FasterRCNN_MobileNet_V3_Large_FPN_Weights.DEFAULT
     normalize = weights.transforms()
@@ -81,7 +83,7 @@ def get_preprocessed_data(data_path, args):
             transforms.Resize((args.resize, args.resize)),
             transforms.RandomApply([transforms.ColorJitter(brightness=0.1, contrast=0.2, saturation=0.2, hue=0.1)], p=0.3),
             transforms.RandomRotation(degrees=5),
-            transforms.RandomApply([transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 5))], p=0.3),  # Add Gaussian Blur
+            transforms.RandomApply([transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 5))], p=0.3),  # Add Gaussian Blur, random apply for random stuffs
             transforms.ToTensor(),
             normalize
         ])
