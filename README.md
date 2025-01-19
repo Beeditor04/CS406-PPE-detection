@@ -1,5 +1,5 @@
 
-# CS406 PPE Detection Violation
+# CS406 PPE Violation Detection
 - Professor: ThS. Cáp Phạm Đình Thăng (thangcpd@uit.edu.vn)
 - Course Id: CS406.P11 (Xử lý ảnh và ứng dụng)
 
